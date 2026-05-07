@@ -35,6 +35,8 @@
     }
   )
   
+  rm(package.check)
+  
 ########################################### Pre-process CPR files ###############################################
   
   #0.1 pre-processing CPR raw files 
@@ -219,9 +221,9 @@
       #load taxon list
       mba_taxonlist <- read_csv("data_input/CPR/CPR_raw_data/mba_cpr_taxonlist.csv", show_col_types = F)
       
-      #remove unidentified / general taxa 
-      unidentified_taxa <- c("Egg indet","Egg mass","Nauplius indet") 
-      df_noUnid <- df_zoop %>% select(!any_of(unidentified_taxa))
+      #remove "is_grouping" taxa (attributed in the raw taxon table provided by the MBA) to avoid double counting 
+      grouping_taxa <- c("Para-Pseudocalanus spp.","Calanus Total Traverse","Total Copepods", "Calanus V-VI Total (Atlantic-fin hel glac)", "Hyperiidea (Total)", "Decapoda larvae (Total)",  "Euphausiacea Total", "Fish eggs (Total)", "Fish larvae", "Dinoflagellate cysts (Total)", "Coccolithaceae (Total)",  "Pterosperma spp. (Total)", "Dinophysis spp. Total", "Prorocentrum spp. Total", "Harpacticoida Total Traverse", "Metridia Total traverse", "Cirripede larvae (Total)", "Foraminifera (Total)", "Radiolaria Total", "Isopoda (Total)", "Neocalanus plumchrus total traverse") 
+      df_noUnid <- df_zoop %>% select(!any_of(grouping_taxa))
       
       #report number of taxon with recognized aphiaID
       count_recognizedAphiaID <- sum(names(df_noUnid) %in% mba_taxonlist$taxa_name, na.rm = T)
@@ -230,7 +232,7 @@
       #rename columns from taxonomic name to AphiaID 
       #prior step: remove unidentified / general taxa from taxon list 
       mba_taxonlist <- mba_taxonlist %>% 
-        filter(., !(taxa_name %in% unidentified_taxa)) %>% 
+        filter(., !(taxa_name %in% grouping_taxa)) %>% 
         filter(., (taxa_name %in% names(df_noUnid)))
       ##to select columns with matched AphiaID
       df_withmatch <- df_noUnid %>% 
@@ -275,11 +277,12 @@
     #loop through each survey
     for(i in 1:length(filenames)){
       file_survey <- str_extract(filenames[i], "(?<=_)[^_]+")
-      print(paste("Survey: ",file_survey, sep=""))
+      print(paste("Reading in survey: ",file_survey, sep=""))
       
-      cpr_metadata <- read_csv(file.list[i], show_col_types = F) %>% 
+      cpr_metadata <- tryCatch(read_csv(file.list[i], show_col_types = F) %>% 
         mutate(survey = file_survey) %>% 
-        select("survey","sample_id","latitude","longitude","sampleTime_UTC")
+        select("survey","sample_id","latitude","longitude","sampleTime_UTC"),
+        error = function(e) print("No listed metadata file in input directory"))
       
       print(paste("File No.", i, sep=""))
       #integrate into a global cpr
@@ -301,15 +304,20 @@
     globalcpr_map <- tm_shape(world) +
       tm_polygons(col = "white") +
       tm_shape(cpr, crs = world_projection, raster.warp = TRUE) +
-      tm_dots(col = "Survey", fill_alpha = 0.5, size = 0.3,
-              labels = c("Australian CPR", "Atlantic CPR", "North Pacific CPR", "SCAR Southern Ocean CPR")) + 
+      tm_dots(fill = "Survey", size = 0.3,
+              fill.scale = tm_scale_categorical(values =  c("#b5de2b", "#35b779", "#31688e", "#440154")),
+              fill.legend =  tm_legend(show = F)) +
       tm_graticules(alpha = 0.5, 
                     x = c(-180, -150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150, 180), 
-                    y = c(-90, -60, -30, 0, 30, 60, 90), 
-                    labels.size = 1) +
+                    y = c(-90, -60, -30, 0, 30, 60, 90)) +
+      tm_add_legend(type = "symbols",
+                    fill =  c("#b5de2b", "#35b779", "#31688e", "#440154"),
+                    shape = 16,
+                    labels = c("Australian CPR", "Atlantic CPR", "North Pacific CPR", "SCAR Southern Ocean CPR"),
+                    title = "Survey") +
       tm_legend(position = c("left", "center"),
                 text.size = 1.2, title.size = 1.4, na.show = F)
-    
+     
     #to export plot
     tmap_save(globalcpr_map, filename=paste0("output/plots/Global-CPR-map_",date,".png"),
               width = 400,
@@ -417,13 +425,11 @@
     ## Load data - read in list of netcdf files
     if(frequency == "eightday"){
       #eightday_OCCCI
-      ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-      #eightday_OCCCI <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+      ncdf_list <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
       
     }else if(frequency == "monthly"){
       #monthly_OCCCI
-      ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global monthly", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-      #monthly_OCCCI <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+      ncdf_list <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
       
     }else{ stop("Wrong frequency indicated", call. = FALSE) }
     
@@ -586,7 +592,7 @@
   compute_proportions_perSurvey <- function(abundance_list){
       #01 get trait list (check version of trait table)
       traits <- read_csv("data_input/traits/fTraitTable.csv", col_names=T, show_col_types = F) 
-      print("Trait table version date: 08 April 2026")
+      print("Trait table version date: 05 May 2026")
       
       #02 Subset the aphiaIDs belonging to each taxonomic group and trophic group
         #zooplankton community
@@ -963,20 +969,20 @@
         #relocate(survey, .before= sample_id) %>% 
         relocate(chla_sqrt, .after=chla)
       
-      print(paste0("Dataframe for omnivores and carnivores saved: df_complete_",date_newVersion,".rds"))
+      print(paste0("Dataframe saved: df_complete_",date_newVersion,".rds"))
       write_rds(df, paste0("output/df/global_df_complete_",date_newVersion,".rds"))   
       write_rds(df, paste0("data_input/global_df_complete_",date_newVersion,".rds")) #second copy for later steps 
       
-      #finalize df for filter-feeders
-      
-      #LH_modification <- c("ARCT", "BENG", "CNRY", "EAFR", "GFST", "GUIN", "MEDI", "NADR", "NASE", "NASW", "NATR", "NECS", "NPPF", "NWCS", "SARC")
-      LH_modification <- c("ARCH","NATR","NPPF")
-      df_modified <- df %>% filter(!(df$longhurst %in% LH_modification))
-      
-      print(paste0(c("Modification of dataframe for filter-feeders is the removal of the following Longhurst Provinces: ", LH_modification), collapse = " "))
-      print(paste0("Dataframe for filter-feeders saved: global_df_complete_Filter_",date_newVersion,".rds"))
-      write_rds(df_modified, paste0("output/df/global_df_complete_Filter_",date_newVersion,".rds"))   
-      write_rds(df_modified, paste0("data_input/global_df_complete_Filter_",date_newVersion,".rds")) #second copy for later steps 
+      # #MODIFICATION OF FILTER-FEEDER DATAFRAME (not implemented currently)
+      # 
+      # #LH_modification <- c("ARCT", "BENG", "CNRY", "EAFR", "GFST", "GUIN", "MEDI", "NADR", "NASE", "NASW", "NATR", "NECS", "NPPF", "NWCS", "SARC")
+      # LH_modification <- c("ARCH","NATR","NPPF")
+      # df_modified <- df %>% filter(!(df$longhurst %in% LH_modification))
+      # 
+      # print(paste0(c("Modification of dataframe for filter-feeders is the removal of the following Longhurst Provinces: ", LH_modification), collapse = " "))
+      # print(paste0("Dataframe for filter-feeders saved: global_df_complete_Filter_",date_newVersion,".rds")) #second copy in 'data_input' folder for later steps 
+      # write_rds(df_modified, paste0("output/df/global_df_complete_Filter_",date_newVersion,".rds"))
+      # write_rds(df_modified, paste0("data_input/global_df_complete_Filter_",date_newVersion,".rds"))
       
     }
     
@@ -1186,41 +1192,45 @@
 
   #5.1 quantile-quantile plot to assess normality of residuals
   plot_QQ <- function(mdl_list) {
-    
     for(i in 1:length(mdl_list)){
-    
-    TG <- names(mdl_list[i])  
-    print(paste0("QQ plot in process for: ", TG))
-    simulationOutput <- simulateResiduals(fittedModel = mdl_list[[i]], plot = FALSE)
-    
-    qq_plot <- wrap_elements(panel = ~plotQQunif(
-      simulationOutput, 
-      testUniformity = FALSE, 
-      testOutliers = FALSE, 
-      testDispersion = FALSE
-    ))
-    
-    if(TG == "Omni"){
-      Omni_qq <- qq_plot
-    }else if(TG == "Carni"){
-      Carni_qq <- qq_plot
-    }else if(TG == "Filter"){
-      Filter_qq <- qq_plot
-    }else{ stop("Error in generating QQ plot") }
-    # To save individual plots
-    # ggsave(paste0("output/plots/",TG,"_QQplot_",date,".png"), plot = qq_plot,
-    #        width = 8, height = 10, dpi = 300)
-    # print(paste0("QQ plot saved: ",TG,"_QQplot_",date,".png"))
-    
+      #setup
+      TG <- names(mdl_list[i])  
+      print(paste0("QQ plot in process for: ", TG))
+      
+      qq_plot <- local({
+        #to generate residuals by simulating from the model
+        simulationOutput <- simulateResiduals(fittedModel = mdl_list[[i]], plot = FALSE)
+        #to generate qq plot
+        wrap_elements(panel = ~plotQQunif(
+          simulationOutput, 
+          testUniformity = FALSE, 
+          testOutliers = FALSE, 
+          testDispersion = FALSE
+        ))
+      })
+      
+      if(TG == "Omni"){
+        Omni_plot <- qq_plot
+      }else if(TG == "Carni"){
+        Carni_plot <- qq_plot
+      }else if(TG == "Filter"){
+        Filter_plot <- qq_plot
+      }else{ stop("Error in assigning QQ plot") }
+      
+      # to save individual plots
+      ggsave(paste0("output/plots/",TG,"_QQplot_",date,".png"), plot = qq_plot,
+             width = 8, height = 10, dpi = 300)
+      print(paste0("QQ plot saved: ",TG,"_QQplot_",date,".png"))
     }
-    # To save merged QQ plots 
+    
+    # to merge QQ plots 
     print(paste0("Plotting and combining the plots"))
-    QQ_patch <- Omni_qq + Carni_qq + Filter_qq +
+    QQ_patch <- Carni_plot + Omni_plot + Filter_plot +
       plot_layout(design = "ABC") +
       plot_annotation(tag_levels = "A", 
-                      theme = theme(plot.title = element_text(size = 16, face = "bold"),
+                      theme = theme(plot.title = element_text(size = 12),
                                     plot.margin = margin(2,2,2,2)))
-    
+    # to save merged plots
     ggsave(paste("output/plots/QQplot_",date,".png",sep=""), plot = QQ_patch,
            width = 10, height = 4, dpi = 600)
     print(paste0("Plot saved: QQplot_",date,".png"))
@@ -1240,7 +1250,7 @@
       if(TG == "Omni"){
         df_Omni_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(ROC_SVT_zib)) %>% filter(!is.na(tow_days))
         Omni_meanVariance <- ggplot(df_Omni_noNA) + aes(fitted(Omni_mdl_zib), resid(Omni_mdl_zib, type = "pearson")) +
-          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = c(.9, .8)) +
+          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = "right") +
           scale_fill_viridis(begin = 0, end = .9, option = "C", limit = range(c(1,1200))) +
           theme(plot.title = element_text(hjust = 0.5), ) +
           labs(fill = "Frequency") + ylab("Residual") + xlab("Fitted Value")
@@ -1248,7 +1258,7 @@
       }else if(TG == "Carni"){
         df_Carni_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RCO_SVT_zib)) %>% filter(!is.na(tow_days))
         Carni_meanVariance <- ggplot(df_Carni_noNA) + aes(fitted(Carni_mdl_zib), resid(Carni_mdl_zib, type = "pearson")) +
-          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = c(.9, .8)) +
+          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = "right") +
           scale_fill_viridis(begin = 0, end = .9, option = "C", limit = range(c(1,1200))) +
           theme(plot.title = element_text(hjust = 0.5), ) +
           labs(fill = "Frequency") + ylab("Residual") + xlab("Fitted Value")
@@ -1256,7 +1266,7 @@
       }else if(TG == "Filter"){
         df_FF_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RFF_SVT_zib)) %>% filter(!is.na(tow_days))
         Filter_meanVariance <- ggplot(df_FF_noNA) + aes(fitted(Filter_mdl_zib), resid(Filter_mdl_zib, type = "pearson")) +
-          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = c(.9, .8)) +
+          geom_hex(bins = 80) + geom_smooth(method = "loess") + pub_theme + theme(legend.position = "right") +
           scale_fill_viridis(begin = 0, end = .9, option = "C", limit = range(c(1,1200))) +
           theme(plot.title = element_text(hjust = 0.5), ) +
           labs(fill = "Frequency") + ylab("Residual") + xlab("Fitted Value")
@@ -1264,7 +1274,6 @@
       }else{stop("Error in designated trophic group: possible misidentified model")}
     }
     
-    ## Residual plot
     # #to save individual plots
     # ggsave(paste("output/illustrations/Filter_meanVariance_",date,".png",sep=""), plot = Filter_meanVariance,
     #        width = 9, height = 6, dpi = 300)
@@ -1276,22 +1285,8 @@
     #        width = 9, height = 6, dpi = 300)
     # #
     
-    # design <- "
-    #             A
-    #             B
-    #             C
-    #           "
-    # 
-    # (meanVariance_patch <- Filter_meanVariance + Omni_meanVariance + Carni_meanVariance +
-    #    plot_layout(design = design) +
-    #    plot_annotation(
-    #      tag_levels = "A",
-    #      theme = theme(plot.title = element_text(size = 16, face = "bold"))
-    #    )
-    # )
-    
     print(paste0("Plotting and combining the plots"))
-    meanVariance_patch <- Omni_meanVariance / Carni_meanVariance / Filter_meanVariance +
+    meanVariance_patch <- Carni_meanVariance / Omni_meanVariance / Filter_meanVariance +
       plot_annotation(tag_levels = "A", 
                       theme = theme(plot.title = element_text(size = 16, face = "bold"),
                                     plot.margin = margin(10,10,10,10)))
@@ -1299,6 +1294,7 @@
     ggsave(paste("output/plots/meanVariance_",date,".png",sep=""), plot = meanVariance_patch,
            width = 5, height = 10, dpi = 300)
     print(paste0("Plot saved: meanVariance_",date,".png"))
+    print("From top to bottom: (A) Carnivores (B) Omnivores (C) Filter-feeders")
   }
   
   #5.3 to plot the intercepts of Longhurst Provinces
@@ -1496,7 +1492,7 @@
   
   #6.1 to predict zooplankton trophic group
   
-  predict_zoop_delta <- function(ensemble, mdls){
+  project_TG_proportions <- function(ensemble, mdls){
     
     #1.1 load ensemble
     ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
@@ -1532,8 +1528,15 @@
         esm_pred_merged <- esm_df %>%
           left_join(esm_pred %>% select("chla_sqrt","estimate"), by = c("chla_sqrt"))
         
+        f_esm_pred <- esm_pred_merged %>% 
+          select(c("chla_sqrt","estimate","x","y")) %>% 
+          mutate(trophicGroup = TG) %>% 
+          mutate(scenario = ssp_scenario) %>% 
+          mutate(level = esm_level) %>% 
+          relocate(c("scenario", "trophicGroup", "level"), .before = "chla_sqrt")
+          
         #1.8 Save predictions in an R data output 
-        saveRDS(esm_pred_merged, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
+        saveRDS(f_esm_pred, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
         print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
         
       }
@@ -1647,254 +1650,211 @@
 
     plot_model_summary_omnivores <- function(date){
       
-      #01 read in df and model
-      # df <- read_csv(paste0("data_input/global_df_complete_",date,".rds"))
+    #Supplementary Figure 1
+      #setup: read in df and model
       df_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(ROC_SVT_zib)) %>% filter(!is.na(tow_days))
-
-      #FIGURE 3
+      
       print("Visual summary of glm for omnivorous zooplankton in preparation")
-      #02 plot model predictions by (A) chl-a and (B) CPR Survey
-      #Omnivores proportion vs. Chl-a
-      pop_preds_omni_chla <- predictions(Omni_mdl_zib, 
-                                         newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                         re.form = NA) # Zeros out random effects
+      #01 to plot predictions by (A) Chl-a 
+        #Omnivores proportion vs. Chl-a
+        pop_preds_omni_chla <- predictions(Omni_mdl_zib,
+                                           newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.001)),
+                                           re.form = NA) # Zeros out random effects
+  
+        omni_plot_chla <- ggplot() + pub_theme +
+          geom_point(data = df_noNA,
+                     aes(x = chla_sqrt, y = ROC_SVT_zib), alpha = 0.1) +
+          geom_ribbon(data = pop_preds_omni_chla, aes(x = chla_sqrt, y = estimate,
+                          ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype=2) +
+          geom_line(data = pop_preds_omni_chla, aes(x = chla_sqrt, y = estimate),colour="blue") +
+          labs(y = "Proportion of omnivores", x = expression(bold(sqrt("Chl-a"))))
+
+      #02 plot intercepts and slope of (A) Longhurst Provinces and (B) Tow No. and Days
+        print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
+        REs <- ranef(Omni_mdl_zib, condVar = TRUE) 
+        TG <- "Omni"
+        
+        re_lh <- REs$cond$longhurst
+        
+        ### Longhurst Province ###
+        qq <- attr(re_lh, "condVar")
+        
+        # Extract intercepts
+        rand.interc <- REs$cond$longhurst
+        
+        # Make a dataframe for plotting
+        df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
+                              sd.interc = 2*sqrt(qq[,,1:length(qq)]),
+                              lev.names = factor(rownames(rand.interc))) %>% 
+          arrange(Intercepts) %>% 
+          within({  # Reorder levels
+            lev.names <- factor(as.character(lev.names),
+                                as.character(lev.names))
+          })
+        
+        re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
+          geom_hline(yintercept=0, linetype = "dashed", color = "black") +
+          geom_errorbar(aes(ymin=Intercepts-sd.interc, 
+                            ymax=Intercepts+sd.interc),
+                        width = 0,color="black") +
+          geom_point(color = "black", size = 2) +
+          guides(size="none",shape="none") + 
+          theme(axis.text.x=element_text(size=10), 
+                axis.title.x=element_text(size=13),
+                panel.grid.minor.x = element_blank(),
+                panel.grid.major.x = element_blank()) +
+          coord_flip() + 
+          labs(y = "Intercept", x = "Longhurst Provinces")
+        
+        #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
+        
+        ### Tow slope and intercept ###
+        
+        # Create a dataframe for plotting
+        re_tow <- REs$cond$`survey:tow_no`
+        
+        towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
+        
+        # Specify frequency breaks
+        my_breaks <- c(1,5,30,175,1000)
+        
+        #
+        re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
+          pub_theme +
+          geom_pointdensity() +
+          scale_colour_viridis_c() +
+          labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
+          theme(
+            axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
+          ) 
       
-      omni_plot_chla <- ggplot(data = pop_preds_omni_chla) + pub_theme +
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = ROC_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype=2) + 
-        geom_line(aes(x = chla_sqrt, y = estimate),colour="blue") + 
-        labs(y = "Proportion of omnivores", x = expression(bold(sqrt("Chl-a")))) 
-      #annotate("text", y = 0.8, x = 3.8, label = expression("Estimate= 0.055; R"^{2}*"= 0.26; p-value=0.006 "), size = 5) 
-      
-      #Omnivores proportion vs. Surveys
-      pop_preds_omni_surveys <- predictions(Omni_mdl_zib, 
-                                            newdata = datagrid(survey = unique(df_noNA$survey), 
-                                                               chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                            re.form = NA) # Zeros out random effects
-      
-      omni_plot_surveys <- ggplot(data = pop_preds_omni_surveys) + pub_theme +
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = ROC_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high, 
-                        colour = survey, fill = survey), alpha = 0.3, colour = NA) + 
-        geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) + 
-        labs(fill = "Survey", y = "Proportion of omnivores", x = expression(bold(sqrt("Chl-a")))) +
-        theme(legend.position.inside = c(0.65, 0.25)) +
-        scale_fill_discrete(labels=c('Australian CPR', 'Atlantic CPR','North Pacific CPR','SCAR Southern Ocean CPR'))
-      
-      #
-      print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
-      REs <- ranef(Omni_mdl_zib, condVar = TRUE) 
-      TG <- "Omni"
-      
-      re_lh <- REs$cond$longhurst
-      
-      ### Longhurst Province ###
-      qq <- attr(re_lh, "condVar")
-      
-      # Extract intercepts
-      rand.interc <- REs$cond$longhurst
-      
-      # Make a dataframe for plotting
-      df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
-                            sd.interc = 2*sqrt(qq[,,1:length(qq)]),
-                            lev.names = factor(rownames(rand.interc))) %>% 
-        arrange(Intercepts) %>% 
-        within({  # Reorder levels
-          lev.names <- factor(as.character(lev.names),
-                              as.character(lev.names))
-        })
-      
-      re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
-        geom_hline(yintercept=0, linetype = "dashed", color = "black") +
-        geom_errorbar(aes(ymin=Intercepts-sd.interc, 
-                          ymax=Intercepts+sd.interc),
-                      width = 0,color="black") +
-        geom_point(color = "black", size = 2) +
-        guides(size="none",shape="none") + 
-        theme(axis.text.x=element_text(size=10), 
-              axis.title.x=element_text(size=13),
-              panel.grid.minor.x = element_blank(),
-              panel.grid.major.x = element_blank()) +
-        coord_flip() + 
-        labs(y = "Intercept", x = "Longhurst Provinces")
-      
-      #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
-      
-      ### Tow slope and intercept ###
-      
-      # Create a dataframe for plotting
-      re_tow <- REs$cond$`survey:tow_no`
-      
-      towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
-      
-      # Specify frequency breaks
-      my_breaks <- c(1,5,30,175,1000)
-      
-      #
-      re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
-        pub_theme +
-        geom_pointdensity() +
-        scale_colour_viridis_c() +
-        labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
-        theme(
-          axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
-        ) 
-      
-      #04 Combine plots per trophic group. 
-      design <- "
-                    AABB
-                    AABB
-                    CCDD
-                    CCDD
-                    CCDD
-                    CCDD
-                  "
-      
-      #Figure 3. Omnivores
-      print("Patching plots together")
-      (final_patch <- omni_plot_chla + omni_plot_surveys + re_lh_plot + re_tow_plot_point_density +
-          plot_layout(design = design) +
-          plot_annotation(
-            tag_levels = "A",
-            theme = theme(plot.title = element_text(size = 12, face = "bold"))
-          )
-      )    
-      print(paste("Saved plot: output/plots/Omni_",date,".png",sep=""))
-      ggsave(paste("output/plots/Omni_",date,".png",sep=""), plot = final_patch,
+      #03 Combine plots per trophic group. 
+        design <- "
+                      AAAAA#
+                      AAAAA#
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                    "
+        
+        #Figure 3. Omnivores
+        print("Patching plots together")
+        (final_patch <- omni_plot_chla + re_lh_plot + re_tow_plot_point_density +
+            plot_layout(design = design) +
+            plot_annotation(
+              tag_levels = "A",
+              theme = theme(plot.title = element_text(size = 12, face = "bold"))
+            )
+        )    
+        ggsave(paste("output/plots/Omni_",date,".png",sep=""), plot = final_patch,
              width = 8, height = 10, dpi = 300)
-      
+      print(paste("Saved plot: output/plots/Omni_",date,".png",sep=""))
     }
     
-    
+  #FIGURE 1
     plot_model_summary_carnivores <- function(date){
       # Create a publication-ready theme (Adapted from 2025 UQ MME Lab Winter R Workshop)
       # #01 read in model
       # load("output/previousModels/revision/fMdl_carni.RData") 
       # df <- read_csv(paste0("data_input/global_df_complete_",date,".rds"))
       df_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RCO_SVT_zib)) %>% filter(!is.na(tow_days))
-
-      
-      #FIGURE 4
+    
       print("Visual summary of glm for carnivorous zooplankton in preparation")
       #B. Carnivores
-      #Carnivores proportion vs. Chl-a
+      #01 to generate predictions for Carnivores proportion vs. Chl-a
+        pop_preds_carni_chla <- predictions(Carni_mdl_zib, 
+                                            newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.001)), 
+                                            re.form = NA) # Zeros out random effects
+        
+        carni_plot_chla <- ggplot(data = pop_preds_carni_chla) + pub_theme + 
+          geom_point(data = df_noNA, 
+                     aes(x = chla_sqrt, y = RCO_SVT_zib), alpha = 0.1) +
+          geom_ribbon(aes(x = chla_sqrt, y = estimate, 
+                          ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype = 2) + 
+          geom_line(aes(x = chla_sqrt, y = estimate),colour="blue") + 
+          labs(y = "Proportion of carnivores", x = expression(bold(sqrt("Chl-a")))) 
+        
+      #02 plot intercepts and slope of (A) Longhurst Provinces and (B) Tow No. and Days
+        REs <- ranef(Carni_mdl_zib, condVar = TRUE) 
+        TG <- "Carni"
+        re_lh <- REs$cond$longhurst
+        
+        ### Longhurst Province ###
+        qq <- attr(re_lh, "condVar")
+        
+        # Extract intercepts
+        rand.interc <- REs$cond$longhurst
+        
+        # Make a dataframe for plotting
+        df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
+                              sd.interc = 2*sqrt(qq[,,1:length(qq)]),
+                              lev.names = factor(rownames(rand.interc))) %>% 
+          arrange(Intercepts) %>% 
+          within({  # Reorder levels
+            lev.names <- factor(as.character(lev.names),
+                                as.character(lev.names))
+          })
+        
+        re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
+          geom_hline(yintercept=0, linetype = "dashed", color = "black") +
+          geom_errorbar(aes(ymin=Intercepts-sd.interc, 
+                            ymax=Intercepts+sd.interc),
+                        width = 0,color="black") +
+          geom_point(color = "black", size = 2) +
+          guides(size="none",shape="none") + 
+          theme(axis.text.x=element_text(size=10), 
+                axis.title.x=element_text(size=13),
+                panel.grid.minor.x = element_blank(),
+                panel.grid.major.x = element_blank()) +
+          coord_flip() + 
+          labs(y = "Intercept", x = "Longhurst Provinces")
+        
+        #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
+        
+        ### Tow slope and intercept ###
+        print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
+        # Create a dataframe for plotting
+        re_tow <- REs$cond$`survey:tow_no`
+        
+        towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
+        
+        # Specify frequency breaks
+        my_breaks <- c(1,5,30,175,1000)
+        
+        #
+        re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
+          pub_theme +
+          geom_pointdensity() +
+          scale_colour_viridis_c() +
+          labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
+          theme(
+            axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
+          ) 
       
-      pop_preds_carni_chla <- predictions(Carni_mdl_zib, 
-                                          newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                          re.form = NA) # Zeros out random effects
+      #03 Combine plots per trophic group. 
+        design <- "
+                      AAAAA#
+                      AAAAA#
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                    "
+        
+        #Figure 4. Carnivores
+        print("Patching plots together")
+        (final_patch <- carni_plot_chla + re_lh_plot + re_tow_plot_point_density +
+            plot_layout(design = design) +
+            plot_annotation(
+              tag_levels = "A",
+              theme = theme(plot.title = element_text(size = 12, face = "bold"))
+            )
+        )    
       
-      carni_plot_chla <- ggplot(data = pop_preds_carni_chla) + pub_theme + 
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = RCO_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype = 2) + 
-        geom_line(aes(x = chla_sqrt, y = estimate),colour="blue") + 
-        labs(y = "Proportion of carnivores", x = expression(bold(sqrt("Chl-a")))) 
-      #annotate("text", y = 0.6, x = 3.8, label = expression("Estimate= -0.22; R"^{2}*"= 0.20; p-value<1e-21 "), size = 5) 
-      
-      #Carnivores proportion vs. Surveys
-      pop_preds_carni_surveys <- predictions(Carni_mdl_zib, 
-                                             newdata = datagrid(survey = unique(df_noNA$survey), 
-                                                                chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                             re.form = NA) # Zeros out random effects
-      
-      carni_plot_surveys <- ggplot(data = pop_preds_carni_surveys) + pub_theme +
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = RCO_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high, 
-                        colour = survey, fill = survey), alpha = 0.3, colour = NA, linetype = 2) + 
-        geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) + 
-        labs(fill = "Survey", y = "Proportion of carnivores", x = expression(bold(sqrt("Chl-a")))) +
-        theme(legend.position.inside = c(0.65, 0.85)) +
-        scale_fill_discrete(labels=c('Australian CPR', 'Atlantic CPR','North Pacific CPR','SCAR Southern Ocean CPR'))
-      
-      
-      REs <- ranef(Carni_mdl_zib, condVar = TRUE) 
-      TG <- "Carni"
-      
-      re_lh <- REs$cond$longhurst
-      
-      ### Longhurst Province ###
-      qq <- attr(re_lh, "condVar")
-      
-      # Extract intercepts
-      rand.interc <- REs$cond$longhurst
-      
-      # Make a dataframe for plotting
-      df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
-                            sd.interc = 2*sqrt(qq[,,1:length(qq)]),
-                            lev.names = factor(rownames(rand.interc))) %>% 
-        arrange(Intercepts) %>% 
-        within({  # Reorder levels
-          lev.names <- factor(as.character(lev.names),
-                              as.character(lev.names))
-        })
-      
-      re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
-        geom_hline(yintercept=0, linetype = "dashed", color = "black") +
-        geom_errorbar(aes(ymin=Intercepts-sd.interc, 
-                          ymax=Intercepts+sd.interc),
-                      width = 0,color="black") +
-        geom_point(color = "black", size = 2) +
-        guides(size="none",shape="none") + 
-        theme(axis.text.x=element_text(size=10), 
-              axis.title.x=element_text(size=13),
-              panel.grid.minor.x = element_blank(),
-              panel.grid.major.x = element_blank()) +
-        coord_flip() + 
-        labs(y = "Intercept", x = "Longhurst Provinces")
-      
-      #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
-      
-      ### Tow slope and intercept ###
-      print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
-      # Create a dataframe for plotting
-      re_tow <- REs$cond$`survey:tow_no`
-      
-      towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
-      
-      # Specify frequency breaks
-      my_breaks <- c(1,5,30,175,1000)
-      
-      #
-      re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
-        pub_theme +
-        geom_pointdensity() +
-        scale_colour_viridis_c() +
-        labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
-        theme(
-          axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
-        ) 
-      
-      #04 Combine plots per trophic group. 
-      design <- "
-                    AABB
-                    AABB
-                    CCDD
-                    CCDD
-                    CCDD
-                    CCDD
-                  "
-      
-      #Figure 4. Carnivores
-      print("Patching plots together")
-      (final_patch <- carni_plot_chla + carni_plot_surveys + re_lh_plot + re_tow_plot_point_density +
-          plot_layout(design = design) +
-          plot_annotation(
-            tag_levels = "A",
-            theme = theme(plot.title = element_text(size = 12, face = "bold"))
-          )
-      )    
-      
-      print(paste("Plot saved: output/plots/Carni_",date,".png",sep=""))
       ggsave(paste("output/plots/Carni_",date,".png",sep=""), plot = final_patch,
              width = 8, height = 10, dpi = 300)
-      
+      print(paste("Plot saved: output/plots/Carni_",date,".png",sep=""))
     }
     
     
@@ -1904,126 +1864,191 @@
       # df_filter <- read_csv(paste0("data_input/global_df_complete_Filter_",date,".rds"))
       df_noNA <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RFF_SVT_zib)) %>% filter(!is.na(tow_days))
 
-      #FIGURE 5
+  #FIGURE 2
       print("Visual summary of glm for gelatinous filter-feeders in preparation")
       #C. Filter-feeders
-      #Filter-feeders proportion vs. Chl-a
-      pop_preds_FF_chla <- predictions(Filter_mdl_zib, 
-                                       newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                       re.form = NA) # Zeros out random effects
+      #01 to generate predictions for Filter-feeders proportion vs. Chl-a
+        pop_preds_FF_chla <- predictions(Filter_mdl_zib, 
+                                         newdata = datagrid(chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.001)), 
+                                         re.form = NA) # Zeros out random effects
+        
+        ff_plot_chla <- ggplot(data = pop_preds_FF_chla) + pub_theme + 
+          geom_point(data = df_noNA, 
+                     aes(x = chla_sqrt, y = RFF_SVT_zib), alpha = 0.1) +
+          geom_ribbon(aes(x = chla_sqrt, y = estimate, 
+                          ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype=2) + 
+          geom_line(aes(x = chla_sqrt, y = estimate),colour="blue") + 
+          labs(y = "Proportion of filter-feeders", x = expression(bold(sqrt("Chl-a")))) 
       
-      ff_plot_chla <- ggplot(data = pop_preds_FF_chla) + pub_theme + 
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = RFF_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high), alpha = 0.3, colour = "blue", linetype=2) + 
-        geom_line(aes(x = chla_sqrt, y = estimate),colour="blue") + 
-        labs(y = "Proportion of filter-feeders", x = expression(bold(sqrt("Chl-a")))) 
-      #annotate("text", y = 0.95, x = 3.5, label = expression("Estimate= -0.49; R"^{2}*"= 0.41; p-value<1e-15 "), size = 5)  
-      
-      #Filter-feeders proportion vs. Surveys
-      pop_preds_FF_surveys <- predictions(Filter_mdl_zib, 
-                                          newdata = datagrid(survey = unique(df_noNA$survey), 
-                                                             chla_sqrt = seq(floor(min(df_noNA$chla_sqrt)),ceiling(max(df_noNA$chla_sqrt)),0.05)), 
-                                          re.form = NA) # Zeros out random effects
-      
-      ff_plot_surveys <- ggplot(data = pop_preds_FF_surveys) + pub_theme +
-        geom_point(data = df_noNA, 
-                   aes(x = chla_sqrt, y = RFF_SVT_zib), alpha = 0.1) +
-        geom_ribbon(aes(x = chla_sqrt, y = estimate, 
-                        ymin = conf.low, ymax = conf.high, 
-                        colour = survey, fill = survey), alpha = 0.3, colour = NA) + 
-        geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) + 
-        labs(fill = "Survey", y = "Proportion of filter-feeders", x = expression(bold(sqrt("Chl-a")))) +
-        theme(legend.position.inside = c(0.65, 0.85)) +
-        scale_fill_discrete(labels=c('Australian CPR', 'Atlantic CPR','North Pacific CPR','SCAR Southern Ocean CPR'))
-      
-      #03 plot intercepts and slope of (A) Longhurst Provinces and (B) Tow No. and Days
-      print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
-      ###Longhurst Province
-      # Extract random effects
-      REs <- ranef(Filter_mdl_zib, condVar = TRUE) #Update the model input
-      TG <- "Filter"
-      
-      
-      
-      re_lh <- REs$cond$longhurst
-      
-      ### Longhurst Province ###
-      qq <- attr(re_lh, "condVar")
-      
-      # Extract intercepts
-      rand.interc <- REs$cond$longhurst
-      
-      # Make a dataframe for plotting
-      df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
-                            sd.interc = 2*sqrt(qq[,,1:length(qq)]),
-                            lev.names = factor(rownames(rand.interc))) %>% 
-        arrange(Intercepts) %>% 
-        within({  # Reorder levels
-          lev.names <- factor(as.character(lev.names),
-                              as.character(lev.names))
-        })
-      
-      re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
-        geom_hline(yintercept=0, linetype = "dashed", color = "black") +
-        geom_errorbar(aes(ymin=Intercepts-sd.interc, 
-                          ymax=Intercepts+sd.interc),
-                      width = 0,color="black") +
-        geom_point(color = "black", size = 2) +
-        guides(size="none",shape="none") + 
-        theme(axis.text.x=element_text(size=10), 
-              axis.title.x=element_text(size=13),
-              panel.grid.minor.x = element_blank(),
-              panel.grid.major.x = element_blank()) +
-        coord_flip() + 
-        labs(y = "Intercept", x = "Longhurst Provinces")
-      
-      #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
-      
-      ### Tow slope and intercept ###
-      
-      # Create a dataframe for plotting
-      re_tow <- REs$cond$`survey:tow_no`
-      
-      towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
-      
-      # Specify frequency breaks
-      my_breaks <- c(1,5,30,175,1000)
-      
-      #
-      re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
-        pub_theme +
-        geom_pointdensity() +
-        scale_colour_viridis_c() +
-        labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
-        theme(
-          axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
-        ) 
-      
-      #04 Combine plots per trophic group. 
-      design <- "
-                    AABB
-                    AABB
-                    CCDD
-                    CCDD
-                    CCDD
-                    CCDD
-                  "
-      
-      #Figure 5. Filter-feeders
-      print("Patching plots together")
-      
-      (final_patch <- ff_plot_chla + ff_plot_surveys + re_lh_plot + re_tow_plot_point_density +
-          plot_layout(design = design) +
-          plot_annotation(
-            tag_levels = "A",
-            theme = theme(plot.title = element_text(size = 12, face = "bold"))
-          )
-      )    
-      
-      print(paste("Plot saved: output/plots/Filter_",date,".png",sep=""))
+      #02 plot intercepts and slope of (A) Longhurst Provinces and (B) Tow No. and Days
+        print("Plotting intercepts and slope of Longhurst Provinces and Tow within Survey")
+        ###Longhurst Province
+        # Extract random effects
+        REs <- ranef(Filter_mdl_zib, condVar = TRUE) #Update the model input
+        TG <- "Filter"
+        
+        
+        
+        re_lh <- REs$cond$longhurst
+        
+        ### Longhurst Province ###
+        qq <- attr(re_lh, "condVar")
+        
+        # Extract intercepts
+        rand.interc <- REs$cond$longhurst
+        
+        # Make a dataframe for plotting
+        df_plot <- data.frame(Intercepts = REs$cond$longhurst[,1],
+                              sd.interc = 2*sqrt(qq[,,1:length(qq)]),
+                              lev.names = factor(rownames(rand.interc))) %>% 
+          arrange(Intercepts) %>% 
+          within({  # Reorder levels
+            lev.names <- factor(as.character(lev.names),
+                                as.character(lev.names))
+          })
+        
+        re_lh_plot <- ggplot(df_plot, aes(lev.names, Intercepts)) + pub_theme + 
+          geom_hline(yintercept=0, linetype = "dashed", color = "black") +
+          geom_errorbar(aes(ymin=Intercepts-sd.interc, 
+                            ymax=Intercepts+sd.interc),
+                        width = 0,color="black") +
+          geom_point(color = "black", size = 2) +
+          guides(size="none",shape="none") + 
+          theme(axis.text.x=element_text(size=10), 
+                axis.title.x=element_text(size=13),
+                panel.grid.minor.x = element_blank(),
+                panel.grid.major.x = element_blank()) +
+          coord_flip() + 
+          labs(y = "Intercept", x = "Longhurst Provinces")
+        
+        #annotate("text", y = -2.3, x = 28, label = "(D)", size = 5)
+        
+        ### Tow slope and intercept ###
+        
+        # Create a dataframe for plotting
+        re_tow <- REs$cond$`survey:tow_no`
+        
+        towDf <- as.data.frame(re_tow) %>% setNames(c("Intercept", "Slope"))
+        
+        # Specify frequency breaks
+        my_breaks <- c(1,5,30,175,1000)
+        
+        #
+        re_tow_plot_point_density <- ggplot(towDf, aes(Intercept, Slope)) +
+          pub_theme +
+          geom_pointdensity() +
+          scale_colour_viridis_c() +
+          labs(colour = "Density", x = "Tow within survey intercept", y = "Tow within survey slope") +
+          theme(
+            axis.text = element_text(size = 14), legend.position.inside = c(0.85, 0.85)    # Adjust the size for axis numbers/text
+          ) 
+        
+     #03 Combine plots per trophic group. 
+        design <- "
+                      AAAAA#
+                      AAAAA#
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                      BBBCCC
+                    "
+        print("Patching plots together")
+        
+        (final_patch <- ff_plot_chla + re_lh_plot + re_tow_plot_point_density +
+            plot_layout(design = design) +
+            plot_annotation(
+              tag_levels = "A",
+              theme = theme(plot.title = element_text(size = 12, face = "bold"))
+            )
+        )    
+        
       ggsave(paste("output/plots/Filter_",date,".png",sep=""), plot = final_patch,
              width = 8, height = 10, dpi = 300)
-      
+      print(paste("Plot saved: output/plots/Filter_",date,".png",sep=""))
     }  
+  
+  #to plot the model estimates per survey in response scale 
+  #Supplementary Figure 2
+  plot_model_perSurvey_responseScale <- function(date){
+
+    #Carnivores proportion per CPR Survey
+    df_noNA_carni <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RCO_SVT_zib)) %>% filter(!is.na(tow_days))
+    
+    pop_preds_carni_surveys <- predictions(Carni_mdl_zib,
+                                           newdata = datagrid(survey = unique(df_noNA_carni$survey),
+                                                              chla_sqrt = seq(floor(min(df_noNA_carni$chla_sqrt)),ceiling(max(df_noNA_carni$chla_sqrt)),0.01)),
+                                           re.form = NA) # Zeros out random effects
+    print("Plotting for carnivores")
+    
+    carni_plot_surveys <- ggplot(data = pop_preds_carni_surveys) + pub_theme +
+      geom_point(data = df_noNA_carni,
+                 aes(x = chla_sqrt, y = RCO_SVT_zib), alpha = 0.1) +
+      geom_ribbon(aes(x = chla_sqrt, y = estimate,
+                      ymin = conf.low, ymax = conf.high,
+                      colour = survey, fill = survey), alpha = 0.3, colour = NA, linetype = 2) +
+      geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) +
+      labs(y = "Proportion of carnivores", x = expression(bold(sqrt("Chl-a")))) +
+      theme(legend.position = "none", axis.title = element_text(size = 12))
+
+    #Omnivores proportion per CPR Survey
+    df_noNA_omni <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(ROC_SVT_zib)) %>% filter(!is.na(tow_days))
+    
+    pop_preds_omni_surveys <- predictions(Omni_mdl_zib,
+                                          newdata = datagrid(survey = unique(df_noNA_omni$survey),
+                                                             chla_sqrt = seq(floor(min(df_noNA_omni$chla_sqrt)),ceiling(max(df_noNA_omni$chla_sqrt)),0.001)),
+                                          re.form = NA) # Zeros out random effects
+    print("Plotting for omnivores")
+    omni_plot_surveys <- ggplot(data = pop_preds_omni_surveys) + pub_theme +
+      geom_point(data = df_noNA_omni,
+                 aes(x = chla_sqrt, y = ROC_SVT_zib), alpha = 0.1) +
+      geom_ribbon(aes(x = chla_sqrt, y = estimate,
+                    ymin = conf.low, ymax = conf.high,
+                    colour = survey, fill = survey), alpha = 0.3, colour = NA) +
+      geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) +
+      labs(fill = "Survey", y = "Proportion of omnivores", x = expression(bold(sqrt("Chl-a")))) +
+      theme(legend.position = 'none', axis.title = element_text(size = 12)) 
+    
+    #Filter-feeders proportion per CPR Survey
+    df_noNA_FF <- df %>% filter(!is.na(chla_sqrt)) %>% filter(!is.na(RFF_SVT_zib)) %>% filter(!is.na(tow_days))
+    
+    pop_preds_FF_surveys <- predictions(Filter_mdl_zib,
+                                        newdata = datagrid(survey = unique(df_noNA_FF$survey),
+                                                           chla_sqrt = seq(floor(min(df_noNA_FF$chla_sqrt)),ceiling(max(df_noNA_FF$chla_sqrt)),0.001)),
+                                        re.form = NA) # Zeros out random effects
+    print("Plotting for filter-feeders")
+    ff_plot_surveys <- ggplot(data = pop_preds_FF_surveys) + pub_theme +
+      geom_point(data = df_noNA_FF,
+                 aes(x = chla_sqrt, y = RFF_SVT_zib), alpha = 0.1) +
+      geom_ribbon(aes(x = chla_sqrt, y = estimate,
+                      ymin = conf.low, ymax = conf.high,
+                      colour = survey, fill = survey), alpha = 0.3, colour = NA) +
+      geom_line(aes(x = chla_sqrt, y = estimate, colour = survey), show.legend = F) +
+      labs(fill = "Survey", y = "Proportion of filter-feeders", x = expression(bold(sqrt("Chl-a")))) +
+      theme(legend.position = "right", axis.title = element_text(size = 12)) +
+      scale_fill_discrete(labels=c('Australian CPR', 'Atlantic CPR','North Pacific CPR','SCAR Southern Ocean CPR'))
+
+    #to combine plots per trophic group. 
+    design <- "AAAABBB
+               AAAABBB
+               #CCCC##
+               #CCCC##"
+    
+    #Figure
+    print("Patching plots together")
+    
+    (final_patch <- carni_plot_surveys + omni_plot_surveys + ff_plot_surveys +
+        plot_layout(design = design) +
+        plot_annotation(
+          tag_levels = "A",
+          theme = theme(plot.title = element_text(size = 18, face = "bold"),
+                        plot.margin = unit(c(0.2,0.2,0.2,0.2),"cm"))
+        )
+    )    
+    
+    ggsave(paste("output/plots/ResponsePerSurvey_",date,".png",sep=""), plot = final_patch,
+           width = 10, height = 6, dpi = 300)
+    print(paste("Plot saved: output/plots/ResponsePerSurvey_",date,".png",sep=""))
+    
+  }
+  
+##End

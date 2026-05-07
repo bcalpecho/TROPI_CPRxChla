@@ -25,8 +25,8 @@ The data preparation and analysis can be performed in two ways:
   * ```5_predict_globalCPR.R``` generate model predictions given the ensemble data.
   * ```6a_generate_ensemble.R``` generate a median ensemble of chlos projections from ten CMIP6 ESM models.
   * ```6b_assess_models.R``` assess the quality of fit of GLMs and produce the supplementary figures for model assessment.
-  * ```7_plot_modelsummary.R``` produce visual summary of selected models (Figures 3, 4, and 5).
-  * ```helper_CPR.R``` additional functions for visualizing and preparing the zooplankton data. Includes creation of Figure 1 (Map of Global CPR).
+  * ```7_plot_modelsummary.R``` produce visual summary of selected models (Figures 1 and 2; Supplementary Figures 1 and 2).
+  * ```helper_CPR.R``` additional functions for visualizing and preparing the zooplankton data. Includes creation of Figure 3 (Map of Global CPR).
   * ```helper_ensemble.R``` additional functions for visualizing and summarizing the ensemble data.
   
 ### Acknowledgements.
