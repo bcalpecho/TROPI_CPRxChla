@@ -425,13 +425,11 @@
     ## Load data - read in list of netcdf files
     if(frequency == "eightday"){
       #eightday_OCCCI
-      ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-      #eightday_OCCCI <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+      ncdf_list <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
       
     }else if(frequency == "monthly"){
       #monthly_OCCCI
-      ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global monthly", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-      #monthly_OCCCI <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+      ncdf_list <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
       
     }else{ stop("Wrong frequency indicated", call. = FALSE) }
     
@@ -594,7 +592,7 @@
   compute_proportions_perSurvey <- function(abundance_list){
       #01 get trait list (check version of trait table)
       traits <- read_csv("data_input/traits/fTraitTable.csv", col_names=T, show_col_types = F) 
-      print("Trait table version date: 08 April 2026")
+      print("Trait table version date: 05 May 2026")
       
       #02 Subset the aphiaIDs belonging to each taxonomic group and trophic group
         #zooplankton community
@@ -1494,7 +1492,7 @@
   
   #6.1 to predict zooplankton trophic group
   
-  predict_zoop_delta <- function(ensemble, mdls){
+  project_TG_proportions <- function(ensemble, mdls){
     
     #1.1 load ensemble
     ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
@@ -1530,8 +1528,15 @@
         esm_pred_merged <- esm_df %>%
           left_join(esm_pred %>% select("chla_sqrt","estimate"), by = c("chla_sqrt"))
         
+        f_esm_pred <- esm_pred_merged %>% 
+          select(c("chla_sqrt","estimate","x","y")) %>% 
+          mutate(trophicGroup = TG) %>% 
+          mutate(scenario = ssp_scenario) %>% 
+          mutate(level = esm_level) %>% 
+          relocate(c("scenario", "trophicGroup", "level"), .before = "chla_sqrt")
+          
         #1.8 Save predictions in an R data output 
-        saveRDS(esm_pred_merged, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
+        saveRDS(f_esm_pred, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
         print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",esm_level,"_",date,".RData",sep=""))
         
       }

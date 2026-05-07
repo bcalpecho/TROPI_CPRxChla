@@ -34,15 +34,19 @@
 
 #set date for version control
   date <- "21032026" #07112025 prior to 26022026
-  df_date <- "21032026" #data frame version (verify with latest df in "data input" folder)
+  df_date <- "04052026" #data frame version (verify with latest df in "data input" folder)
 
-# Import data
-  df <- read_rds(paste("data_input/global/df_complete_",df_date,".rds",sep=""))
-  
-  #set ceiling for chl-a values
+  # Import data
+  df <- read_rds(paste0("data_input/global_df_complete_",df_date,".rds"))
+  #to add Chla with a ceiling at 3 mg/m^3
   df <- df %>%
     mutate(chla_withCeilingAt3 = case_when(chla > 3 ~ 3,
-                                            .default = chla)) 
+                                           .default = chla)) 
+  #to add Latitude in absolute terms
+  df <- df %>% 
+    mutate(latitude_Abs = abs(latitude)) %>% 
+    relocate(latitude_Abs, .after = latitude)
+  
   #to remove NA values,
   df_noNA <- df %>% filter(!is.na(chla)) 
   
@@ -61,7 +65,7 @@
     #Note: SVT transformation for 1s only; non-transformed [0,1) 
     Filter_mdl_zib <- glmmTMB(RFF_SVT_zib ~ chla_sqrt + survey + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                           ziformula = ~1,
-                          data = df_modified, family = beta_family(link = "logit"))
+                          data = df, family = beta_family(link = "logit"))
     
     Omni_mdl_zib <- glmmTMB(ROC_SVT_zib ~ chla_sqrt + survey + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                         ziformula = ~1,
@@ -77,15 +81,15 @@
         #Filter chl-a only (non-transformed, sqrt transformed, with Ceiling at 3)
         Filter_mdl_zib_chla_sqrt <- glmmTMB(RFF_SVT_zib ~ chla_sqrt + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                                   ziformula = ~1,
-                                  data = df_modified, family = beta_family(link = "logit"))
+                                  data = df, family = beta_family(link = "logit"))
  
         Filter_mdl_zib_chla <- glmmTMB(RFF_SVT_zib ~ chla + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                                        ziformula = ~1,
-                                       data = df_modified, family = beta_family(link = "logit"))
+                                       data = df, family = beta_family(link = "logit"))
         
         Filter_mdl_zib_chla_withCeilingAt3 <- glmmTMB(RFF_SVT_zib ~ chla_withCeilingAt3 + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                                        ziformula = ~1,
-                                       data = df_modified, family = beta_family(link = "logit"))
+                                       data = df, family = beta_family(link = "logit"))
         
         #Omni chl-a only (non-transformed, sqrt transformed, with Ceiling at 3)
         Omni_mdl_zib_chla <- glmmTMB(ROC_SVT_zib ~ chla + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
@@ -123,19 +127,6 @@
         Carni_mdl_zib_latitude <- glmmTMB(RCO_SVT_zib ~ chla_sqrt + latitude_Abs + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                                            ziformula = ~1,
                                            data = df, family = beta_family(link = "logit"))
-        #Models with survey and latitude
-        Filter_mdl_zib_surveyLat <- glmmTMB(RFF_SVT_zib ~ chla_sqrt + survey + latitude_Abs +  (1 + tow_days | survey: tow_no) + (1 | longhurst), 
-                                           ziformula = ~1,
-                                           data = df, family = beta_family(link = "logit"))
-        
-        Carni_mdl_zib_surveyLat <- glmmTMB(RCO_SVT_zib ~ chla_sqrt + survey + latitude_Abs +  (1 + tow_days | survey: tow_no) + (1 | longhurst),  
-                                            ziformula = ~1,
-                                            data = df, family = beta_family(link = "logit"))
-        
-        Omni_mdl_zib_surveyLat <- glmmTMB(ROC_SVT_zib ~ chla_sqrt + survey + latitude_Abs +  (1 + tow_days | survey: tow_no) + (1 | longhurst), 
-                                            ziformula = ~1,
-                                            data = df, family = beta_family(link = "logit"))
-        
 
 #Visualize the predictions    
     ##prior step
@@ -277,7 +268,6 @@
       Filter_mdl_zib_chla_sqrt_R2 <- MuMIn::r.squaredGLMM(Filter_mdl_zib_chla_sqrt)
       Filter_mdl_zib_chla_withCeilingAt3_R2 <- MuMIn::r.squaredGLMM(Filter_mdl_zib_chla_withCeilingAt3)
       Filter_mdl_zib_R2 <- MuMIn::r.squaredGLMM(Filter_mdl_zib)
-      Filter_mdl_zib_surveyLat_R2 <- MuMIn::r.squaredGLMM(Filter_mdl_zib_surveyLat)
       Filter_mdl_zib_Lat_R2 <- MuMIn::r.squaredGLMM(Filter_mdl_zib_latitude)
       Filter_mdl_zib_coeff <- summary(Filter_mdl_zib)$coefficients$cond %>% as.data.frame()
       
@@ -286,7 +276,6 @@
       Omni_mdl_zib_chla_sqrt_R2 <- MuMIn::r.squaredGLMM(Omni_mdl_zib_chla_sqrt)
       Omni_mdl_zib_chla_withCeilingAt3_R2 <- MuMIn::r.squaredGLMM(Omni_mdl_zib_chla_withCeilingAt3)
       Omni_mdl_zib_R2 <- MuMIn::r.squaredGLMM(Omni_mdl_zib)
-      Omni_mdl_zib_surveyLat_R2 <- MuMIn::r.squaredGLMM(Omni_mdl_zib_surveyLat)
       Omni_mdl_zib_Lat_R2 <- MuMIn::r.squaredGLMM(Omni_mdl_zib_latitude)
       Omni_mdl_zib_coeff <- summary(Omni_mdl_zib)$coefficients$cond %>% as.data.frame()
     
@@ -295,7 +284,6 @@
       Carni_mdl_zib_chla_sqrt_R2 <- MuMIn::r.squaredGLMM(Carni_mdl_zib_chla_sqrt)
       Carni_mdl_zib_chla_withCeilingAt3_R2 <- MuMIn::r.squaredGLMM(Carni_mdl_zib_chla_withCeilingAt3)
       Carni_mdl_zib_R2 <- MuMIn::r.squaredGLMM(Carni_mdl_zib)
-      Carni_mdl_zib_surveyLat_R2 <- MuMIn::r.squaredGLMM(Carni_mdl_zib_surveyLat)
       Carni_mdl_zib_Lat_R2 <- MuMIn::r.squaredGLMM(Carni_mdl_zib_latitude)
       Carni_mdl_zib_coeff <- summary(Carni_mdl_zib)$coefficients$cond %>% as.data.frame()
                             

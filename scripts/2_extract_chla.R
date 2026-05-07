@@ -24,13 +24,11 @@
     ## Load data - read in list of netcdf files
       if(frequency == "eightday"){
         #eightday_OCCCI
-        ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-        #eightday_OCCCI <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+        ncdf_list <- list.files(path = "data_input/OCCCI/eightday/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
         
       }else if(frequency == "monthly"){
         #monthly_OCCCI
-        ncdf_list <- list.files(path = "C:/Users/power/Desktop/OC-CCI/Global monthly", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
-        #monthly_OCCCI <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
+        ncdf_list <- list.files(path = "data_input/OCCCI/monthly/", pattern = "*\\.nc4", full.names = TRUE) #temporary file source due to large file size
         
       }else{ stop("Wrong frequency indicated", call. = FALSE) }
     

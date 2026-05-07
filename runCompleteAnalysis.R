@@ -2,6 +2,16 @@
 # DATA PREPARATION AND ANALYSIS #
 ####                          ####
 
+#### README: How to run? ####
+## A. For replicating the current model, skip steps 1-3 or data preparation steps. 
+# Follow Step 4 onwards using dataframe uploaded in 'data_input' folder.
+
+## B. For complete run-through including data preparation, 
+# Raw CPR files must be stored in 'data_input/CPR' 
+# Raw OC-CCI files must be stored in 'data_input/OCCCI' 
+# Follow from the first step (pre-process raw CPR files).
+
+
 # 0 Setup ####
   # Load functions and set directories
   
@@ -12,27 +22,27 @@
   #### set date and list of models for version control and coverage of CPR surveys
   date <- "04052026"
   survey_list <- c("auscpr", "socpr","npacific","natlantic")
-
+  
 ########## Pre-process raw CPR data #########
   # Read in raw CPR csv files (includes translation from taxa_name to AphiaID)
   # Outputs: metadata and abundance dataframe for each CPR survey
   
-  #auscpr
-    auscpr_rawfile <- read_csv("data_input/CPR/CPR_raw_data/IMOS_-_Zooplankton_Abundance_and_Biomass_Index_(CPR)-raw_data.csv")
-    preprocess_auscpr(auscpr_rawfile)
-
-  #socpr
-    socpr_rawfile <- read_csv("data_input/CPR/CPR_raw_data/AADC-00099_29August2025.csv")
-    preprocess_socpr(socpr_rawfile)
-
-  #mba natlantic and npacific cpr
-    mba_rawfile <- read_csv("data_input/CPR/CPR_raw_data/NPacifc_Atlantic_CPR_1958_2021.csv")
-      #above dataset is not uploaded in the repository, but earlier versions are available online.
-    preprocess_mba_cpr(mba_rawfile)
-  
-  #to map the global cpr (Output: Figure 1)
-    cpr_meta <- list.files(path = "data_input/CPR/", pattern = "*\\metadata.csv", full.names = TRUE)
-    map_globalcpr(cpr_meta)
+  # #auscpr
+  #   auscpr_rawfile <- read_csv("data_input/CPR/CPR_raw_data/IMOS_-_Zooplankton_Abundance_and_Biomass_Index_(CPR)-raw_data.csv")
+  #   preprocess_auscpr(auscpr_rawfile)
+  # 
+  # #socpr
+  #   socpr_rawfile <- read_csv("data_input/CPR/CPR_raw_data/AADC-00099_29August2025.csv")
+  #   preprocess_socpr(socpr_rawfile)
+  # 
+  # #mba natlantic and npacific cpr
+  #   mba_rawfile <- read_csv("data_input/CPR/CPR_raw_data/NPacifc_Atlantic_CPR_1958_2021.csv")
+  #     #above dataset is not uploaded in the repository, but earlier versions are available online.
+  #   preprocess_mba_cpr(mba_rawfile)
+  # 
+  # #to map the global cpr (Output: Figure 1)
+  #   cpr_meta <- list.files(path = "data_input/CPR/", pattern = "*\\metadata.csv", full.names = TRUE)
+  #   map_globalcpr(cpr_meta)
       
 ########## 1 Generate trait table ##########
 
@@ -46,9 +56,9 @@
   # 
   # # taxonomy table (Pata & Hunt, 2023)
   #   # Citation: Pata, P. R., & Hunt, B. P. V. (2023). Harmonizing marine zooplankton trait data toward a mechanistic understanding of ecosystem functioning. Limnology and Oceanography, 70(S1), S8–S27. https://doi.org/10.1002/lno.12478
-  #   taxonomy <- read_csv("data_input/PataHunt_taxonomy_table_20230628.csv")
+  #   taxonomy <- read_csv("data_input/PataHunt_taxonomy_table_20230628.csv") #available as a supplementary table in Pata & Hunt (2023)
   # 
-  # # match species list with taxonomy file to get taxonID AND keep AphiaID without taxonID
+  # # match species list with taxonomy file 
   #   taxa.list <- taxa.list  %>%
   #     left_join(taxonomy, by = c("aphiaID")) %>%
   #     distinct(aphiaID, .keep_all = TRUE) 
@@ -62,41 +72,40 @@
     
 ########## 2 Extract Chl-a ##########
   
-  #Steps in extracting Chl-a data given spatial and temporal coordinates of CPR sampling points
-  #2.1 aggregate raster of OC-CCI
-    #8-day OC-CCI
-    aggregate_ncdf(survey_list, "eightday", date)
-    #monthly OC-CCI
-    aggregate_ncdf(survey_list, "monthly", date)
-
-  #2.2 extract raster data at CPR sampling points
-    #8-day OC-CCI
-    extract_chla(survey_list, "eightday")
-    #monthly OC-CCI
-    extract_chla(survey_list, "monthly")
-
-  #2.3 Fill-up gaps of eight-day by monthly OC-CCI values if available
-    fill_up_gaps(survey_list, date)
+  # #Steps in extracting Chl-a data given spatial and temporal coordinates of CPR sampling points
+  # #2.1 aggregate raster of OC-CCI
+  #   #8-day OC-CCI
+  #   aggregate_ncdf(survey_list, "eightday", date)
+  #   #monthly OC-CCI
+  #   aggregate_ncdf(survey_list, "monthly", date)
+  # 
+  # #2.2 extract raster data at CPR sampling points
+  #   #8-day OC-CCI
+  #   extract_chla(survey_list, "eightday")
+  #   #monthly OC-CCI
+  #   extract_chla(survey_list, "monthly")
+  # 
+  # #2.3 Fill-up gaps of eight-day by monthly OC-CCI values if available
+  #   fill_up_gaps(survey_list, date)
 
 ########## 3 Generate Global data frame ##########
   
-  #3.1 get abundance list of CPR surveys (list of csv files of zooplankton abundances from each CPR survey)
-    file.list <- list.files(path = "data_input/CPR/", pattern = "*\\_abundance.csv", full.names = TRUE)
-  
-  #3.2 Compute for proportions of zooplankton trophic groups
-    compute_proportions_perSurvey(file.list) 
-  
-  #3.3 Combine variables altogether into a dataframe for each CPR survey
-    generate_df_perSurvey(date)
-  
-  #3.4 generate GLOBAL dataframe and compute for ratios
-    generate_globalCPR_dataframe(date)
+  # #3.1 get abundance list of CPR surveys (list of csv files of zooplankton abundances from each CPR survey)
+  #   file.list <- list.files(path = "data_input/CPR/", pattern = "*\\_abundance.csv", full.names = TRUE)
+  # 
+  # #3.2 Compute for proportions of zooplankton trophic groups
+  #   compute_proportions_perSurvey(file.list) 
+  # 
+  # #3.3 Combine variables altogether into a dataframe for each CPR survey
+  #   generate_df_perSurvey(date)
+  # 
+  # #3.4 generate GLOBAL dataframe and compute for ratios
+  #   generate_globalCPR_dataframe(date)
     
 ########## 4 Model the Global CPR ##########
 
   # 4.1 Import data
-    #for omnivores and carnivores
-    df_date <- "13042026"
+    df_date <- date
     df <- read_rds(paste0("data_input/global_df_complete_",df_date,".rds"))
     
   # 4.2 Selected models (see '4_model_globalCPR' script for competing models)  + survey
@@ -173,9 +182,9 @@
   #5.5 to plot residuals of models with and without the random effects
     plot_residuals(mdl_list)
   
-########## 6b Predict Global CPR ##########
+########## 6b Project Global CPR ##########
   
-  #6b.1 to predict zooplankton trophic group 
+  #6b.1 to project zooplankton trophic group 
     #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
     ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
     
@@ -186,13 +195,13 @@
     names(mdl_list) <- c("Carni","Omni","Filter")
     
     #ssp126
-    predict_zoop_delta(ensembles_median[1], mdl_list)
+    project_TG_proportions(ensembles_median[1], mdl_list)
     #ssp245
-    predict_zoop_delta(ensembles_median[2], mdl_list)
+    project_TG_proportions(ensembles_median[2], mdl_list)
     #ssp370
-    predict_zoop_delta(ensembles_median[3], mdl_list)
+    project_TG_proportions(ensembles_median[3], mdl_list)
     #ssp585
-    predict_zoop_delta(ensembles_median[4], mdl_list)
+    project_TG_proportions(ensembles_median[4], mdl_list)
   
    #6b.3 to compute for delta of trophic groups between 2015 and 2100
     compute_zoop_delta(mdl_list)
