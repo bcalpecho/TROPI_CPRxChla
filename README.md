@@ -1,6 +1,6 @@
-# Modeling Continuous Plankton Recorder Surveys
+# Modelling Continuous Plankton Recorder Surveys
 
-Repository for MSc thesis project on assessing the changes in global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. The project uses the combined data of CPR Surveys of the Australian CPR, the Atlantic CPR, the North Pacific CPR, and the Southern Ocean CPR. 
+Repository for a research project on assessing the changes of the global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. The project uses the combined data of CPR Surveys of the Australian CPR, the Atlantic CPR, the North Pacific CPR, and the Southern Ocean CPR. 
 
 ### Data availability.
 Our findings are supported by open-access datasets. The data of Continuous Plankton Recorder surveys are available in their respective online repositories. 
