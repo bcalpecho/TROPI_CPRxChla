@@ -16,6 +16,7 @@
                 "gstat",
                 "sp",
                 "sf",
+                "CFtime",
                 "viridis",
                 "gridGraphics",
                 "rnaturalearth",
@@ -415,6 +416,15 @@
     print(paste0("File output: df/TraitTable_comparison.csv"))
   }
   
+  #1.6 export selected variables of trait table
+  export_traitTable <- function(trait_table){
+    proc_traitTable <- trait_table %>% 
+      select("order","family","scientificName","aphiaID","TG_latest", "References") %>% 
+      filter(TG_latest != "NA")
+    
+    write_csv(proc_traitTable, "output/df/supplementaryTable_traits.csv")
+    cat("File output: df/supplementaryTable_traits.csv")
+  }
   ## See '1_generate_traits' script for full preparation of trait table.
   
 ########################################### 2_extract_chla ##################################################
@@ -1490,7 +1500,7 @@
 
 ########################################### 6b_predict_globalCPR ############################################## 
   
-  #6.1 to predict zooplankton trophic group
+  #6b.1 to project zooplankton trophic group
   
   project_TG_proportions <- function(ensemble, mdls){
     
@@ -1504,7 +1514,7 @@
     esm_list <- list(ens_snapshot_baseline, ens_snapshot_future)
     names(esm_list) <- c("baseline","future")
     
-    print(paste0("Generating predictions under ",ssp_scenario," scenario"))
+    print(paste0("Projections under ",ssp_scenario," scenario"))
     #1.4 perform iteration of predicting outcomes per zooplankton trophic group    
     for(i in 1:length(mdls)){
       #identify trophic group
@@ -1543,8 +1553,7 @@
     }
   }
   
-  
-  #6.2 to compute for delta of trophic groups between 2015 and 2100
+  #6b.2 to compute for delta of trophic groups between 2015 and 2100
   
   compute_zoop_delta <- function(mdls){
     #stable projections - 24 & 25022026
@@ -1589,7 +1598,7 @@
     }
   }
   
-  #6.3 to provide summary statistics for projected trophic groups' relative abundance
+  #6b.3 to provide summary statistics for projected trophic groups' relative abundance
   
   summary_stats_TG <- function(mdls){
     
@@ -1644,7 +1653,201 @@
     }
     
   }
+  
+  #6b.4 to project zooplankton trophic groups annually 
+    ##similar code to example of 'models fitted for every pixel' in 'stars' vignette: https://r-spatial.github.io/stars/articles/stars7.html
+  
+  project_annual_TG_proportions <- function(ensemble, mdls){
+    
+    #1.1 load ensemble
+    ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
+    
+      #subset ens_selected
+      # s_ens_selected <- ens_selected %>% filter(x >= 89.6 & x <= 175, y >= -65.2 & y <= -10.6)
+      # auscpr min(x) = 89.6, max(x) = 175, min(y) = -65.2, max(y) = -10.6
+      # s_ens_selected <- ens_selected[,89.6:175,-65.2:-10.6,]
+      
+    #1.2 identify ssp scenario
+    ssp_scenario <- str_extract(basename(ensemble), "ssp\\d{3}|historical")
+    
+    print(paste0("Projections under ",ssp_scenario," scenario"))
+    
+    #1.3 perform ANNUAL iteration of predicting outcomes per zooplankton trophic group  
+    for(i in 1:length(mdls)){
+      #identify trophic group
+      TG <- names(mdls)[i]
+      print(paste0("Model in process: ",TG))
+      # out_TGprop <- function(x){
+      #   if( anyNA(x))
+      #     NA_real_
+      #   else
+      #     predictions(mdls[[i]], newdata = datagrid(chla_sqrt = x), re.form = NA)[2]
+      # }
+      
+      #to convert chlos (kg/m^3) to chla_sqrt (sqrt (mg/m^3) )
+      chla_sqrt <- function(x){ sqrt(x * 1000000) } #conversion factor from kg m-3 to 
+      
+      esm_converted <- st_apply(ens_selected,1:3, chla_sqrt, rename = TRUE)  
+      
+      ##
+          # 1. Grab the intact time values from the original object
+          time_meta <- st_dimensions(ens_selected)$time$values
+          
+          # 2. Convert the CFtime object into human-readable strings
+          time_strings <- time_meta$as_timestamp()
+          
+          #time_strings <- CFtime(time_meta)
+          # Expected output: "2015-07-01T06:00:00" "2016-07-01T06:00:00" ...
+          
+          # 3. Pull out just the 4-digit years
+          years <- as.numeric(substr(time_strings, 1, 4))
+          head(years)
+          # Expected output: 2015 2016 2017 2018
+        
+          esm_converted <- st_set_dimensions(esm_converted, "time", values = years, names = "year")
+          
+      #convert star to df
+      esm_df <- as.data.frame(esm_converted, xy = TRUE, na.rm = FALSE) #xy coordinates and kept 'NA'
+      #simplify esm_df
+      esm_df <- esm_df %>% select(c("chla_sqrt","x","y","year"))
+      ##
+      
+      #1.7 predict outcomes of models given the Chl-a projections
+      esm_pred <- predictions(mdls[[i]], newdata = datagrid(chla_sqrt = esm_df$chla_sqrt), re.form = NA)
+      
+      esm_pred_merged <- esm_df %>%
+        left_join(esm_pred %>% select("chla_sqrt","estimate","conf.low", "conf.high"), by = c("chla_sqrt"))
+      
+      f_esm_pred <- esm_pred_merged %>% 
+        mutate(trophicGroup = TG) %>% 
+        mutate(scenario = ssp_scenario) %>% 
+        relocate(c("scenario", "trophicGroup"), .before = "chla_sqrt")
+      
+      #1.8 Save predictions in an R data output 
+      saveRDS(f_esm_pred, file=paste("output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+      print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+      
+      
+      # #simplify esm_df
+      # esm_df <- esm_df %>% select(c(chla_sqrt,x,y))
+      # 
+      # #to predict outcomes of models given the Chl-a projections
+      # #output <- st_apply(esm_converted, 1:3, out_TGprop)
+      # 
+      # #mean_output <- st_apply(output, 3, mean)
+      # #plot(output, breaks = "equal", main = "Proportion of TG")
+      # 
+      # #convert star to df
+      # df_output <- as.data.frame(output, xy = FALSE, na.rm = FALSE) #xy coordinates and kept 'NA'
+      # 
+      # #1.8 Save predictions in an R data output 
+      # saveRDS(df_output, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+      # print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+      # 
+    }
+  }
+  
+  #6b.5 to plot the projected proportions of zooplankton trophic groups annually
+  
+  plot_annual_TG_proportions <- function(mdls, ensembles){
+    for(i in 1:length(mdls)){
+      TG <- names(mdls)[i]
+      if(TG == "Carni"){
+        TG_label <- "carnivorous zooplankton"
+      }else if(TG == "Omni"){
+        TG_label <- "omnivorous zooplankton"
+      }else if(TG == "Filter"){
+        TG_label == "gelatinous filter-feeders"
+      }
+      print(paste0("Model in process: ",TG_label))
+      
+      
+      for(j in 1:length(ensembles)){
 
+        ssp_scenario <- str_extract(basename(ensembles[[j]]), "ssp\\d{3}")
+        
+        print(paste0("Projections under ",ssp_scenario," scenario"))
+        
+        #1 Read projections from RData 
+        projection <- readRDS(file=paste("output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+        print(paste("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+        
+        #2 Calculate annual mean of projections from RData
+        #chla_sqrt, estimate, x, y, year
+        m_projection <- projection %>%
+          group_by(year) %>% 
+          summarise(annual_mean = mean(estimate, na.rm = T), 
+                    annual_conf.low = mean(conf.low, na.rm = T),
+                    annual_conf.high = mean(conf.high, na.rm = T)) 
+          
+        #3  Plot delta of annual mean relative to baseline
+        plot <- ggplot(data = m_projection) + pub_theme +
+          geom_ribbon(aes(x = year, y = annual_mean,
+                          ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
+          geom_line(aes(x = year, y = annual_mean),colour="blue") +
+          labs(y = paste0("Proportion of ",TG_label), x = expression(bold(sqrt("Chl-a")))) +
+          ylim(0, 1)
+        
+        ggsave(paste0("output/plots/projections_",TG,"_",date,".png"), plot = plot,
+               width = 8, height = 10, dpi = 300)
+        print(paste0("output/plots/projections_",TG,"_",date,".png"))
+        
+      }
+    }    
+  }
+  
+  #6_ REVISED: to compute delta of zooplankton trophic groups
+  
+  compute_zoop_delta <- function(mdls){
+      date_projections <- date
+      
+      ssp_list <- c("ssp126","ssp245","ssp370","ssp585")
+      
+      for(i in 1: length(mdls)){
+        TG <- names(mdls)[i]
+        
+        print(paste0("Model in process: ",TG))
+        
+        df_hist <- readRDS(file=paste("output/projections/",TG,"_historical_",date_projections,".RData",sep=""))
+        
+        df_hist_sel <- df_hist %>% filter(year >= 1980 & year <= 2000)
+        
+        df_hist_sel <- df_hist_sel %>% rename_with(~ paste0("hist_", .x))
+        
+        df_hist_mean <- df_hist_sel %>% group_by(hist_x, hist_y) %>% summarize(mean_hist_est = mean(hist_estimate, na.rm = T))
+        
+        for(j in 1:length(ssp_list)){
+          
+          if(file.exists(paste0("output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData"))) {
+            
+            df_ssp <- readRDS(file=paste0("output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData"))
+            
+              #ssp_scenario <- str_extract(basename(ensemble), "ssp\\d{3}")
+              
+              print(paste0("Loaded projections under ",ssp_list[j]," scenario"))
+              
+            df_merged <- df_ssp %>% left_join(df_hist_mean, by = join_by("x"=="hist_x", "y"=="hist_y"))  
+              
+            df_merged <- df_merged %>% mutate(delta = (estimate - mean_hist_est), delta_perc = ((estimate-mean_hist_est)/mean_hist_est)*100)          
+            
+            delta_perc_summary <- df_merged %>% 
+              summarise(mean_delta = mean(delta_perc, na.rm =T), 
+                        median_delta = median(delta_perc, na.rm =T), 
+                        Q1_delta = quantile(delta_perc, 0.25, na.rm =T), 
+                        Q3_delta = quantile(delta_perc, 0.75, na.rm =T), 
+                        min_delta = min(delta_perc, na.rm = T),
+                        max_delta = max(delta_perc, na.rm = T))
+            
+            print(TG)
+            print(delta_perc_summary)
+            
+          }else {
+            print(paste("File does not exist: output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData",sep=""))
+          }
+        }
+      }
+  }
+  
 ########################################### 7_plot_modelsummary #############################################################
   #to plot visual summary (fixed + random effects) of glmmTMB model
 

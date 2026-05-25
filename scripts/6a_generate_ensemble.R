@@ -1,7 +1,5 @@
 # ---
 # title: Wrangle ESMs using R package 'hotrstuff'
-# author: Bryan Alpecho
-# date: 2025-
 # output: ESM projection for Chl-a 
 # ---
 
