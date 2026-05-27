@@ -28,11 +28,10 @@ var <- "chlos"
 ## NorESM2-LM
 ## NorESM2-MM
 
-#prior step: download wget scripts from ESGF server
-
-#downloading ESM outputs
+#01 to download ESM outputs using the following functions (alternatively, manually download from ESGF)
   base_dir <- "/home/bcalp/UQ" 
   
+  #prior step: save wget files in the path directory of 'indir' attribute of 'htr_download_ESM'
   htr_download_ESM(
     hpc = NA,
     indir = file.path(base_dir, "data", "wget"), #directory for wget scripts
@@ -40,7 +39,7 @@ var <- "chlos"
     quiet = TRUE,
     security = FALSE)
   
-#merge files
+#02 to merge files
   htr_merge_files(
     indir = file.path(base_dir, "data", "raw", var), # input directory
     outdir = file.path(base_dir, "data", "proc", "merged", var), # output directory
@@ -48,28 +47,28 @@ var <- "chlos"
     year_end = 2100 # latest year across all the scenarios considered
   )
 
-#Adjust and reframe time periods
+# to adjust and reframe time periods to 2015-2100 for ScenarioMIPs and 1980-2000 for historical data of ESMs
   htr_slice_period(
     indir = file.path(base_dir, "data", "proc", "merged", var), # input directory
     outdir = file.path(base_dir, "data", "proc", "sliced", var), # output directory
-    freq = "Omon", # ocean, daily
+    freq = "Omon", # ocean, monthly
     scenario = "ssp",
-    year_start = 2015,
-    year_end = 2100,
+    year_start = 2015, #
+    year_end = 2100, #double check years depending if ScenarioMIP or historical
     overwrite = FALSE
   )
 
-#Fix calendar periods (if needed)
+# to fix calendar periods (if needed in case the covered time period has a leap year)
   htr_fix_calendar(indir = file.path(base_dir, "data", "proc", "sliced", var)) # will be rewritten
 
-# #Changing frequency of climate data
+# to change frequency of climate data to yearly
   htr_change_freq(
     freq = "yearly",
     indir = file.path(base_dir, "data", "proc", "sliced", var), # input directory
     outdir = file.path(base_dir, "data", "proc", "yearly", var)
   )
 
-#Regridding
+# to regrid into 1.0 x 1.0 cell size (make it consistent for all projections)
   htr_regrid_esm(
     indir = file.path(base_dir, "data", "proc", "yearly", var),
     outdir = file.path(base_dir, "data", "proc", "regridded", "yearly", var),
@@ -77,7 +76,8 @@ var <- "chlos"
     layer = "annual"
   )
 
-#Generate ensemble
+# to generate ensemble
+  #prior step: double check the scenario and model_list for the involved ESMs in the ensemble to be generated.
   #ensemble by median
   htr_create_ensemble(
     indir = file.path(base_dir, "data", "proc", "regridded", "yearly", var), # input directory
@@ -88,6 +88,8 @@ var <- "chlos"
     scenario = "ssp370", # scenario
     mean = FALSE # if false, takes the median
   )
+
+# to check the ensemble 
   ensemble_model <- list.files(file.path(base_dir, "data", "proc", "ensemble", "median", var), full.names = TRUE)
   ensemble <- rast(ensemble_model)
   plot(ensemble$chlos_86)  #to plot ensemble at year 2100 (value of 'time' = 86)
