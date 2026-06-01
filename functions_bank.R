@@ -2,7 +2,7 @@
 #     FUNCTIONS BANK     #
 ####                  ####
 
-#Load libraries
+## Load libraries ####
   packages <- c("tidyverse",
                 "stars",
                 "terra",
@@ -35,10 +35,9 @@
       }
     }
   )
+  rm(package.check, packages)
   
-  rm(package.check)
-  
-########################################### Pre-process CPR files ###############################################
+## Pre-process CPR files ###############################################
   
   #0.1 pre-processing CPR raw files 
   #pre-process Australian CPR survey
@@ -327,7 +326,7 @@
               dpi = 400)
   }
   
-########################################### 1_generate_traits ###################################################
+## 1_generate_traits ###################################################
   
   #1.1 Integrate Pata & Hunt (2023) assigned trait value to species list
   import_TG.PataHunt <- function(species.list){
@@ -427,7 +426,7 @@
   }
   ## See '1_generate_traits' script for full preparation of trait table.
   
-########################################### 2_extract_chla ##################################################
+## 2_extract_chla ##################################################
   
   #2.1 aggregate raster file of OC-CCI (based on 'wrangle-netcdf-imos' script from 2024 UQ MME Lab R Workshop)
   aggregate_ncdf <- function(survey_list, frequency, date) {
@@ -597,7 +596,7 @@
     }
   }
   
-########################################### 3_generate_completeDF ##################################################
+## 3_generate_completeDF ##################################################
   #3.1 Compute for proportions of trophic groups
   compute_proportions_perSurvey <- function(abundance_list){
       #01 get trait list (check version of trait table)
@@ -996,7 +995,7 @@
       
     }
     
-########################################### 4_model_globalCPR ##############################################################
+## 4_model_globalCPR ##############################################################
     
     #4.1 to summarize the estimated proportions of zooplankton trophic groups with Chl-a as a predictor
     
@@ -1173,7 +1172,7 @@
       print("Saved in Global Env: summary_SurveyEstimates")
     }
     
-########################################### 5_assess_models ########################################################################### 
+## 5_assess_models ########################################################################### 
   
   # Create a publication-ready theme (Adapted from 2025 UQ MME Lab Winter R Workshop)
   pub_theme <- theme_classic(base_size = 10, base_family = "sans") + # Family including Arial, Helvetica, Futura, Verdana, and Calibri
@@ -1498,11 +1497,11 @@
     }
   }
 
-########################################### 6b_predict_globalCPR ############################################## 
+## 6b_predict_globalCPR ############################################## 
   
   #6b.1 to project zooplankton trophic group
   
-  project_TG_proportions <- function(ensemble, mdls){
+    project_TG_proportions <- function(ensemble, mdls){
     
     #1.1 load ensemble
     ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
@@ -1555,7 +1554,7 @@
   
   #6b.2 to compute for delta of trophic groups between 2015 and 2100
   
-  compute_zoop_delta <- function(mdls){
+    compute_zoop_delta_2015 <- function(mdls){
     #stable projections - 24 & 25022026
     date_projections <- date
     
@@ -1600,7 +1599,7 @@
   
   #6b.3 to provide summary statistics for projected trophic groups' relative abundance
   
-  summary_stats_TG <- function(mdls){
+    summary_stats_TG <- function(mdls){
     
     ssp_list <- list("ssp126","ssp245","ssp370","ssp585")
     for(i in 1:length(mdls)){
@@ -1626,7 +1625,7 @@
     
   }
   
-  baseline_stats_TG <- function(mdls){
+    baseline_stats_TG <- function(mdls){
     
     ssp_list <- list("ssp126","ssp245","ssp370","ssp585")
     
@@ -1657,7 +1656,7 @@
   #6b.4 to project zooplankton trophic groups annually 
     ##similar code to example of 'models fitted for every pixel' in 'stars' vignette: https://r-spatial.github.io/stars/articles/stars7.html
   
-  project_annual_TG_proportions <- function(ensemble, mdls){
+    project_annual_TG_proportions <- function(ensemble, mdls){
     
     #1.1 load ensemble
     ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
@@ -1749,7 +1748,7 @@
   
   #6b.5 to plot the projected proportions of zooplankton trophic groups annually
   
-  plot_annual_TG_proportions <- function(mdls, ensembles){
+    plot_annual_TG_proportions <- function(ensemble, mdls){
     for(i in 1:length(mdls)){
       TG <- names(mdls)[i]
       if(TG == "Carni"){
@@ -1762,15 +1761,15 @@
       print(paste0("Model in process: ",TG_label))
       
       
-      for(j in 1:length(ensembles)){
+      for(j in 1:length(ensemble)){
 
-        ssp_scenario <- str_extract(basename(ensembles[[j]]), "ssp\\d{3}")
+        ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
         
         print(paste0("Projections under ",ssp_scenario," scenario"))
         
         #1 Read projections from RData 
-        projection <- readRDS(file=paste("output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
-        print(paste("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+        projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+        print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
         
         #2 Calculate annual mean of projections from RData
         #chla_sqrt, estimate, x, y, year
@@ -1796,9 +1795,66 @@
     }    
   }
   
-  #6_ REVISED: to compute delta of zooplankton trophic groups
+  #6b.6 plot % change in relative abundance of zooplankton trophic groups
   
-  compute_zoop_delta <- function(mdls){
+    plot_delta_TG_proportions <- function(ensemble, mdls){
+    for(i in 1:length(mdls)){
+      TG <- names(mdls)[i]
+      if(TG == "Carni"){
+        TG_label <- "carnivorous zooplankton"
+      }else if(TG == "Omni"){
+        TG_label <- "omnivorous zooplankton"
+      }else if(TG == "Filter"){
+        TG_label == "gelatinous filter-feeders"
+      }
+      print(paste0("Model in process: ",TG_label))
+      
+      historical <- readRDS(file=paste0("output/projections/",TG,"_historical_",date,".RData")) %>% 
+        group_by(x,y) %>% 
+        summarize("hist_estimate" = mean(estimate, na.rm = T))
+      print(paste0("Loaded historical data: ",TG,"_historical_",date,".RData"))
+      
+      for(j in 1:length(ensemble)){
+        
+        ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+        
+        print(paste0("Projections under ",ssp_scenario," scenario"))
+        
+        #1 Read projections from RData 
+        projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+        print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+        
+        #2 Calculate annual mean of projections from RData
+        #chla_sqrt, estimate, x, y, year
+        m_projection <- projection %>% 
+          left_join(historical, by = join_by("x","y")) %>% 
+          mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
+        
+        m_projection <- m_projection %>%   
+          group_by(year) %>% 
+          summarise(annual_mean = mean(estimate, na.rm = T), 
+                    annual_conf.low = mean(conf.low, na.rm = T),
+                    annual_conf.high = mean(conf.high, na.rm = T)) 
+        
+        #3  Plot delta of annual mean relative to baseline
+        plot <- ggplot(data = m_projection) + pub_theme +
+          geom_ribbon(aes(x = year, y = annual_mean,
+                          ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
+          geom_line(aes(x = year, y = annual_mean),colour="blue") +
+          labs(y = paste0("Proportion of ",TG_label), x = expression(bold(sqrt("Chl-a")))) +
+          ylim(-1, 1)
+        
+        ggsave(paste0("output/plots/projections_delta_",TG,"_",date,".png"), plot = plot,
+               width = 8, height = 10, dpi = 300)
+        print(paste0("output/plots/projections_delta_",TG,"_",date,".png"))
+        
+      }
+    }    
+  }
+  
+  #6b.7 to compute delta of zooplankton trophic groups
+
+    compute_zoop_delta_historical <- function(mdls){
       date_projections <- date
       
       ssp_list <- c("ssp126","ssp245","ssp370","ssp585")
@@ -1814,7 +1870,8 @@
         
         df_hist_sel <- df_hist_sel %>% rename_with(~ paste0("hist_", .x))
         
-        df_hist_mean <- df_hist_sel %>% group_by(hist_x, hist_y) %>% summarize(mean_hist_est = mean(hist_estimate, na.rm = T))
+        df_hist_mean <- df_hist_sel %>% group_by(hist_x, hist_y) %>% summarize(mean_hist_est = mean(hist_estimate, na.rm = T),
+                                                                               median_hist_est = median(hist_estimate, na.rm = T))
         
         for(j in 1:length(ssp_list)){
           
@@ -1838,8 +1895,23 @@
                         min_delta = min(delta_perc, na.rm = T),
                         max_delta = max(delta_perc, na.rm = T))
             
+            df_merged_median <- df_ssp %>% left_join(df_hist_mean, by = join_by("x"=="hist_x", "y"=="hist_y"))  
+            
+            df_merged_median <- df_merged %>% mutate(delta = (estimate - median_hist_est), delta_perc = ((estimate-median_hist_est)/median_hist_est)*100)          
+            
+            delta_perc_median_summary <- df_merged_median %>% 
+              summarise(mean_delta = mean(delta_perc, na.rm =T), 
+                        median_delta = median(delta_perc, na.rm =T), 
+                        Q1_delta = quantile(delta_perc, 0.25, na.rm =T), 
+                        Q3_delta = quantile(delta_perc, 0.75, na.rm =T), 
+                        min_delta = min(delta_perc, na.rm = T),
+                        max_delta = max(delta_perc, na.rm = T))
+            
             print(TG)
+            print("By mean")
             print(delta_perc_summary)
+            print("By median")
+            print(delta_perc_median_summary)
             
           }else {
             print(paste("File does not exist: output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData",sep=""))
@@ -1848,7 +1920,7 @@
       }
   }
   
-########################################### 7_plot_modelsummary #############################################################
+## 7_plot_modelsummary #############################################################
   #to plot visual summary (fixed + random effects) of glmmTMB model
 
     plot_model_summary_omnivores <- function(date){
