@@ -1599,7 +1599,7 @@
   
   #6b.3 to provide summary statistics for projected trophic groups' relative abundance
   
-    summary_stats_TG <- function(mdls){
+    summary_TG_yr2100 <- function(mdls){
     
     ssp_list <- list("ssp126","ssp245","ssp370","ssp585")
     for(i in 1:length(mdls)){
@@ -1625,7 +1625,7 @@
     
   }
   
-    baseline_stats_TG <- function(mdls){
+    summary_TG_yr2015 <- function(mdls){
     
     ssp_list <- list("ssp126","ssp245","ssp370","ssp585")
     
@@ -1654,96 +1654,71 @@
   }
   
   #6b.4 to project zooplankton trophic groups annually 
-    ##similar code to example of 'models fitted for every pixel' in 'stars' vignette: https://r-spatial.github.io/stars/articles/stars7.html
+      ##similar code to example of 'models fitted for every pixel' in 'stars' vignette: https://r-spatial.github.io/stars/articles/stars7.html
   
     project_annual_TG_proportions <- function(ensemble, mdls){
-    
-    #1.1 load ensemble
-    ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
-    
-      #subset ens_selected
-      # s_ens_selected <- ens_selected %>% filter(x >= 89.6 & x <= 175, y >= -65.2 & y <= -10.6)
-      # auscpr min(x) = 89.6, max(x) = 175, min(y) = -65.2, max(y) = -10.6
-      # s_ens_selected <- ens_selected[,89.6:175,-65.2:-10.6,]
       
-    #1.2 identify ssp scenario
-    ssp_scenario <- str_extract(basename(ensemble), "ssp\\d{3}|historical")
-    
-    print(paste0("Projections under ",ssp_scenario," scenario"))
-    
-    #1.3 perform ANNUAL iteration of predicting outcomes per zooplankton trophic group  
-    for(i in 1:length(mdls)){
-      #identify trophic group
-      TG <- names(mdls)[i]
-      print(paste0("Model in process: ",TG))
-      # out_TGprop <- function(x){
-      #   if( anyNA(x))
-      #     NA_real_
-      #   else
-      #     predictions(mdls[[i]], newdata = datagrid(chla_sqrt = x), re.form = NA)[2]
-      # }
-      
-      #to convert chlos (kg/m^3) to chla_sqrt (sqrt (mg/m^3) )
-      chla_sqrt <- function(x){ sqrt(x * 1000000) } #conversion factor from kg m-3 to 
-      
-      esm_converted <- st_apply(ens_selected,1:3, chla_sqrt, rename = TRUE)  
-      
-      ##
-          # 1. Grab the intact time values from the original object
-          time_meta <- st_dimensions(ens_selected)$time$values
-          
-          # 2. Convert the CFtime object into human-readable strings
-          time_strings <- time_meta$as_timestamp()
-          
-          #time_strings <- CFtime(time_meta)
-          # Expected output: "2015-07-01T06:00:00" "2016-07-01T06:00:00" ...
-          
-          # 3. Pull out just the 4-digit years
-          years <- as.numeric(substr(time_strings, 1, 4))
-          head(years)
-          # Expected output: 2015 2016 2017 2018
+        #1.1 load ensemble
+        ens_selected <- read_stars(ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
         
-          esm_converted <- st_set_dimensions(esm_converted, "time", values = years, names = "year")
+          #for trial with subset: subset ens_selected
+          # s_ens_selected <- ens_selected[,89.6:175,-65.2:-10.6,]
+            # auscpr min(x) = 89.6, max(x) = 175, min(y) = -65.2, max(y) = -10.6
           
-      #convert star to df
-      esm_df <- as.data.frame(esm_converted, xy = TRUE, na.rm = FALSE) #xy coordinates and kept 'NA'
-      #simplify esm_df
-      esm_df <- esm_df %>% select(c("chla_sqrt","x","y","year"))
-      ##
-      
-      #1.7 predict outcomes of models given the Chl-a projections
-      esm_pred <- predictions(mdls[[i]], newdata = datagrid(chla_sqrt = esm_df$chla_sqrt), re.form = NA)
-      
-      esm_pred_merged <- esm_df %>%
-        left_join(esm_pred %>% select("chla_sqrt","estimate","conf.low", "conf.high"), by = c("chla_sqrt"))
-      
-      f_esm_pred <- esm_pred_merged %>% 
-        mutate(trophicGroup = TG) %>% 
-        mutate(scenario = ssp_scenario) %>% 
-        relocate(c("scenario", "trophicGroup"), .before = "chla_sqrt")
-      
-      #1.8 Save predictions in an R data output 
-      saveRDS(f_esm_pred, file=paste("output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
-      print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
-      
-      
-      # #simplify esm_df
-      # esm_df <- esm_df %>% select(c(chla_sqrt,x,y))
-      # 
-      # #to predict outcomes of models given the Chl-a projections
-      # #output <- st_apply(esm_converted, 1:3, out_TGprop)
-      # 
-      # #mean_output <- st_apply(output, 3, mean)
-      # #plot(output, breaks = "equal", main = "Proportion of TG")
-      # 
-      # #convert star to df
-      # df_output <- as.data.frame(output, xy = FALSE, na.rm = FALSE) #xy coordinates and kept 'NA'
-      # 
-      # #1.8 Save predictions in an R data output 
-      # saveRDS(df_output, file=paste("Output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
-      # print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
-      # 
-    }
+        #1.2 identify ssp scenario
+        ssp_scenario <- str_extract(basename(ensemble), "ssp\\d{3}|historical")
+        
+        print(paste0("Projections under ",ssp_scenario," scenario"))
+        
+        #1.3 perform ANNUAL iteration of predicting outcomes per zooplankton trophic group  
+        for(i in 1:length(mdls)){ 
+          #identify trophic group
+          TG <- names(mdls)[i]
+          print(paste0("Model in process: ",TG))
+  
+          #to convert chlos (kg/m^3) to chla_sqrt (sqrt (mg/m^3) )
+            chla_sqrt <- function(x){ sqrt(x * 1000000) } 
+          
+          esm_converted <- st_apply(ens_selected,1:3, chla_sqrt, rename = TRUE)  
+          
+          ### Following code generated by AI
+            #through a Gemini prompt of "R how to generate a new dimension of stars object indicating year from a time dimension that is a CFTime_365_day (e.g. 2015-07-01T06:00:00).'
+              #to extract time values from the original object
+              time_meta <- st_dimensions(ens_selected)$time$values
+              
+              #to convert the CFtime object into readable strings
+              time_strings <- time_meta$as_timestamp()
+              
+              #to extract the 4-digit years from the string (199_, 200_, ...)
+              years <- as.numeric(substr(time_strings, 1, 4))
+              
+              #to overwrite the time dimension
+              esm_converted <- st_set_dimensions(esm_converted, "time", values = years, names = "year")
+          ###
+              
+          #to convert star to df
+          esm_df <- as.data.frame(esm_converted, xy = TRUE, na.rm = FALSE) #xy coordinates and kept 'NA'
+          #to simplify esm_df   
+          esm_df <- esm_df %>% select(c("chla_sqrt","x","y","year"))
+          
+          #to predict outcomes of models given the Chl-a projections
+            esm_pred <- predictions(mdls[[i]], newdata = datagrid(chla_sqrt = esm_df$chla_sqrt), re.form = NA)
+          
+          #to merge df of esm projections with the df of model predictions  
+          esm_pred_merged <- esm_df %>%
+            left_join(esm_pred %>% select("chla_sqrt","estimate","conf.low", "conf.high"), by = c("chla_sqrt"))
+          
+          #to simplify df
+          f_esm_pred <- esm_pred_merged %>% 
+            mutate(trophicGroup = TG) %>% 
+            mutate(scenario = ssp_scenario) %>% 
+            relocate(c("scenario", "trophicGroup"), .before = "chla_sqrt")
+          
+          #to save predictions in an R data output 
+          saveRDS(f_esm_pred, file=paste("output/projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+          print(paste("Output saved: projections/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+          
+      }
   }
   
   #6b.5 to plot the projected proportions of zooplankton trophic groups annually
@@ -1779,7 +1754,7 @@
                     annual_conf.low = mean(conf.low, na.rm = T),
                     annual_conf.high = mean(conf.high, na.rm = T)) 
           
-        #3  Plot delta of annual mean relative to baseline
+        #3  Plot annual mean
         plot <- ggplot(data = m_projection) + pub_theme +
           geom_ribbon(aes(x = year, y = annual_mean,
                           ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
@@ -1795,64 +1770,302 @@
     }    
   }
   
-  #6b.6 plot % change in relative abundance of zooplankton trophic groups
+  #6b.6 to plot % change in relative abundance of zooplankton trophic groups
   
-    plot_delta_TG_proportions <- function(ensemble, mdls){
-    for(i in 1:length(mdls)){
-      TG <- names(mdls)[i]
-      if(TG == "Carni"){
-        TG_label <- "carnivorous zooplankton"
-      }else if(TG == "Omni"){
-        TG_label <- "omnivorous zooplankton"
-      }else if(TG == "Filter"){
-        TG_label == "gelatinous filter-feeders"
-      }
-      print(paste0("Model in process: ",TG_label))
-      
-      historical <- readRDS(file=paste0("output/projections/",TG,"_historical_",date,".RData")) %>% 
-        group_by(x,y) %>% 
-        summarize("hist_estimate" = mean(estimate, na.rm = T))
-      print(paste0("Loaded historical data: ",TG,"_historical_",date,".RData"))
-      
-      for(j in 1:length(ensemble)){
+    plot_delta <- function(ensemble, mdls){
+      for(i in 1:length(mdls)){
+        TG <- names(mdls)[i]
+        if(TG == "Carni"){
+          TG_label <- "carnivorous zooplankton"
+        }else if(TG == "Omni"){
+          TG_label <- "omnivorous zooplankton"
+        }else if(TG == "Filter"){
+          TG_label == "gelatinous filter-feeders"
+        }
+        print(paste0("Model in process: ",TG_label))
         
-        ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+        historical <- readRDS(file=paste0("output/projections/",TG,"_historical_",date,".RData")) %>% 
+          group_by(x,y) %>% 
+          summarize("hist_estimate" = mean(estimate, na.rm = T))
+        print(paste0("Loaded historical data: ",TG,"_historical_",date,".RData"))
         
-        print(paste0("Projections under ",ssp_scenario," scenario"))
+        for(j in 1:length(ensemble)){
+          
+          ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+          
+          print(paste0("Projections under ",ssp_scenario," scenario"))
+          
+          #1 Read projections from RData 
+          projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          
+          #2 Calculate annual mean of projections from RData
+          #chla_sqrt, estimate, x, y, year
+          m_projection <- projection %>% 
+            left_join(historical, by = join_by("x","y")) %>% 
+            mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
+          
+          m_projection <- m_projection %>%   
+            group_by(year) %>% 
+            summarise(annual_mean = mean(estimate, na.rm = T), 
+                      annual_conf.low = mean(conf.low, na.rm = T),
+                      annual_conf.high = mean(conf.high, na.rm = T)) 
+          
+          #3  Plot delta of annual mean relative to baseline
+          plot <- ggplot(data = m_projection) + pub_theme +
+            geom_ribbon(aes(x = year, y = annual_mean,
+                            ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
+            geom_line(aes(x = year, y = annual_mean),colour="blue") +
+            labs(y = paste0("Proportion of ",TG_label), x = expression(bold(sqrt("Chl-a")))) +
+            ylim(-1, 1)
+          
+          ggsave(paste0("output/plots/projections_delta_",TG,"_",ssp_scenario,"_",date,".png"), plot = plot,
+                 width = 8, height = 10, dpi = 300)
+          print(paste0("Output: plots/projections_delta_",TG,"_",ssp_scenario,"_",date,".png"))
+  
+        }
+      }    
+    }
+    
+  #6b.7 to plot projected proportions for each trophic group in a single plot
+    
+    plot_delta_perTG <- function(ensemble, mdls){
+      for(i in 1:length(mdls)){
+        TG <- names(mdls)[i]
+        if(TG == "Carni"){
+          TG_label <- "carnivorous zooplankton"
+        }else if(TG == "Omni"){
+          TG_label <- "omnivorous zooplankton"
+        }else if(TG == "Filter"){
+          TG_label == "gelatinous filter-feeders"
+        }
+        print(paste0("Model in process: ",TG_label))
         
-        #1 Read projections from RData 
-        projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
-        print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+        historical <- readRDS(file=paste0("output/projections/",TG,"_historical_",date,".RData")) 
         
-        #2 Calculate annual mean of projections from RData
-        #chla_sqrt, estimate, x, y, year
-        m_projection <- projection %>% 
-          left_join(historical, by = join_by("x","y")) %>% 
+        print(paste0("Loaded historical data: ",TG,"_historical_",date,".RData"))
+        
+        #to subset baseline (1980-2000) and recent past (1980-2014)
+        baseline <- historical %>% 
+          filter(year >= 1980 & year <= 2000) %>%
+          group_by(x,y) %>% 
+          summarize("hist_estimate" = mean(estimate, na.rm = T)) #mean or median?
+        
+        #to compute for delta in recent past relative to baseline (1980-2000)
+        recentPast <- historical %>% 
+          filter(year >= 1980 & year <= 2014) 
+        
+        recentPast_calc <- recentPast %>% 
+          left_join(baseline, by = join_by("x","y")) %>% 
           mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
         
-        m_projection <- m_projection %>%   
+        recentPast_summary <- recentPast_calc %>%   
           group_by(year) %>% 
-          summarise(annual_mean = mean(estimate, na.rm = T), 
-                    annual_conf.low = mean(conf.low, na.rm = T),
-                    annual_conf.high = mean(conf.high, na.rm = T)) 
+          summarise(annual_median = median(delta, na.rm = T), 
+                    annual_sd = sd(delta, na.rm = T)) 
+        
+        recentPast_summary <- recentPast_summary %>% 
+          mutate(annual_median_u = annual_median + annual_sd,
+                 annual_median_l = annual_median - annual_sd)
+        
+        #empty tibble
+        m_projection <- tibble(experiment = character(length = 0),
+                               year = numeric(length = 0),
+                               annual_median = numeric(length = 0),
+                               annual_sd = numeric(length = 0),
+                               annual_median_u = numeric(length = 0),
+                               annual_median_l = numeric(length = 0))
+        
+        ssp_list <- c()
+        
+        for(j in 1:length(ensemble)){
+          ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+          print(paste0("Projections under ",ssp_scenario," scenario"))
+          ssp_list <- c(ssp_list, ssp_scenario)
+          
+          #to include recentPast to 'm_projection' df 
+          recentPast_summary <- recentPast_summary %>% 
+            mutate(experiment = ssp_scenario) #in order to merge recentPast data with the projection scenarios
+          m_projection <- m_projection %>% 
+            rows_insert(recentPast_summary, by = "experiment")
+          
+          #to process scenario experiment data 
+            #1 Read projections from RData 
+            projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+            print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+            
+            #2 Calculate annual mean of projections from RData
+            #chla_sqrt, estimate, x, y, year
+            projection_calc <- projection %>% 
+              left_join(baseline, by = join_by("x","y")) %>% 
+              mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
+            
+            projection_summary <- projection_calc %>%   
+              group_by(year) %>% 
+              summarise(annual_median = median(delta, na.rm = T), 
+                        annual_sd = sd(delta, na.rm = T)) %>% 
+              mutate(experiment = ssp_scenario)
+            
+            projection_summary <- projection_summary %>% 
+              mutate(annual_median_u = annual_median + annual_sd,
+                     annual_median_l = annual_median - annual_sd)
+          
+          #to save each iteration of projection summary to 'm_projection' df 
+          m_projection <- m_projection %>% 
+            rows_append(projection_summary)
+          
+        }
+        
+        write_rds(m_projection, file = paste0("output/projections/fProjections_",TG,"_",date))
+        print(paste0("Saved projection data: output/projections/fProjections_",TG,"_",date))
         
         #3  Plot delta of annual mean relative to baseline
         plot <- ggplot(data = m_projection) + pub_theme +
-          geom_ribbon(aes(x = year, y = annual_mean,
-                          ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
-          geom_line(aes(x = year, y = annual_mean),colour="blue") +
-          labs(y = paste0("Proportion of ",TG_label), x = expression(bold(sqrt("Chl-a")))) +
-          ylim(-1, 1)
+          geom_ribbon(aes(x = year, y = annual_median,
+                          ymin = annual_median_l, ymax = annual_median_u, colour = factor(experiment), fill = factor(experiment)), alpha = 0.1, linetype=2, show.legend = F) +
+          geom_line(aes(x = year, y = annual_median, colour=factor(experiment))) +
+          labs(y = bquote(Delta~"proportion of"~.(TG_label)~"(%)"), x = "Year") +
+          coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
+          theme(legend.title = element_blank(), legend.position = "right", axis.title = element_text(size = 12)) +
+          scale_colour_discrete(labels=toupper(ssp_list)) 
         
         ggsave(paste0("output/plots/projections_delta_",TG,"_",date,".png"), plot = plot,
                width = 8, height = 10, dpi = 300)
-        print(paste0("output/plots/projections_delta_",TG,"_",date,".png"))
+        print(paste0("Output: plots/projections_delta_",TG,"_",date,".png"))
         
-      }
-    }    
-  }
+      }    
+    }
+    
+  #6b.8 to plot projected proportions for each ssp scenario in a single plot
+    
+    plot_delta_perSSPscenario <- function(ensemble, mdls){
+      for(j in 1:length(ensemble)){
+        ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+        
+        if(ssp_scenario == "ssp126"){
+          ssp_scenario_label <- "SSP 1-2.6"
+        }else if(ssp_scenario == "ssp245"){
+          ssp_scenario_label <- "SSP 2-4.5"
+        }else if(ssp_scenario == "ssp370"){
+          ssp_scenario_label <- "SSP 3-7.0"
+        }else if(ssp_scenario == "ssp585"){
+          ssp_scenario_label <- "SSP 5-8.5"
+        }else{ print("Misspecified SSP scenario")}
+          
+        print(paste0("Projections under ",ssp_scenario," scenario"))
+        
+        #to create df for merged projections of each TG
+        # m_projection <- tibble(scenario = character(length = 6),
+        #                        trophicGroup = character(length = 6),
+        #                        chla_sqrt = numeric(length = 3),
+        #                        x = numeric(length = 3),
+        #                        y = numeric(length = 3),
+        #                        year = numeric(length = 4),
+        #                        estimate = numeric(length = 3),
+        #                        conf.low = numeric(length = 3),
+        #                        conf.high = numeric(length = 3))
+        
+        m_projection <- tibble(trophicGroup = character(length = 0),
+                               year = numeric(length = 0),
+                               annual_median = numeric(length = 0),
+                               annual_sd = numeric(length = 0),
+                               annual_median_u = numeric(length = 0),
+                               annual_median_l = numeric(length = 0))
+        TG_list <- c()
+        
+        for(i in 1:length(mdls)){
+          TG <- names(mdls)[i]
+          
+          if(TG == "Carni"){
+            TG_label <- "Carnivorous zooplankton"
+          }else if(TG == "Omni"){
+            TG_label <- "Omnivorous zooplankton"
+          }else if(TG == "Filter"){
+            TG_label <- "Gelatinous filter-feeders"
+          }else{ print("Misspecified TG")}
+          print(paste0("Model in process: ",TG_label))
+          TG_list <- c(TG_list, TG_label)
+          
+          historical <- readRDS(file=paste0("output/projections/",TG,"_historical_",date,".RData")) 
+          
+          print(paste0("Loaded historical data: ",TG,"_historical_",date,".RData"))
+          
+          #to subset baseline (1980-2000) and recent past (1980-2014)
+          baseline <- historical %>% 
+            filter(year >= 1980 & year <= 2000) %>%
+            group_by(x,y) %>% 
+            summarize("hist_estimate" = mean(estimate, na.rm = T)) #mean or median?
+          
+          #to compute for delta in recent past relative to baseline (1980-2000)
+          recentPast <- historical %>% 
+            filter(year >= 1980 & year <= 2014) 
+          
+          recentPast_calc <- recentPast %>% 
+            left_join(baseline, by = join_by("x","y")) %>% 
+            mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
+          
+          recentPast_summary <- recentPast_calc %>%   
+            group_by(year) %>% 
+            summarise(annual_median = median(delta, na.rm = T), 
+                      annual_sd = sd(delta, na.rm = T)) 
+          
+          recentPast_summary <- recentPast_summary %>% 
+            mutate(annual_median_u = annual_median + annual_sd,
+                   annual_median_l = annual_median - annual_sd)
+          
+          #to include recentPast to 'm_projection' df 
+          recentPast_summary <- recentPast_summary %>% 
+            mutate(trophicGroup = TG) #in order to merge recentPast data with the projection scenarios
+          m_projection <- m_projection %>% 
+            rows_insert(recentPast_summary, by = "trophicGroup")
+          
+          #1 Read projections from RData 
+          projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          
+          #2 Calculate annual mean of projections from RData
+          #chla_sqrt, estimate, x, y, year
+          projection_calc <- projection %>% 
+            left_join(baseline, by = join_by("x","y")) %>% 
+            mutate(delta = ((estimate - hist_estimate)/hist_estimate) * 100)
+          
+          projection_summary <- projection_calc %>%   
+            group_by(year) %>% 
+            summarise(annual_median = median(delta, na.rm = T), 
+                      annual_sd = sd(delta, na.rm = T)) %>% 
+            mutate(trophicGroup = TG) 
+          
+          projection_summary$trophicGroup <- factor(projection_summary$trophicGroup, levels = c("Carni","Omni","Filter"))
+            
+          projection_summary <- projection_summary %>% 
+            mutate(annual_median_u = annual_median + annual_sd,
+                   annual_median_l = annual_median - annual_sd)
+          
+          #to save each iteration of projection summary to 'm_projection' df 
+          m_projection <- m_projection %>% 
+            rows_append(projection_summary)
+        }
+        
+        #to plot delta of annual mean relative to baseline per trophic group in a single plot
+        TG_colors <- c("Filter" = "#00aedb", "Carni" = "#d11141", "Omni" = "#00b159")
+        
+        plot <- ggplot(data = m_projection) + pub_theme +
+          geom_ribbon(aes(x = year, y = annual_median,
+                          ymin = annual_median_l, ymax = annual_median_u, colour = trophicGroup, fill = trophicGroup), alpha = 0.1, linetype=2, show.legend = F) +
+          geom_line(aes(x = year, y = annual_median, colour=factor(trophicGroup))) +
+          labs(colour = "Trophic Group", y = bquote(Delta~"proportion under"~.(ssp_scenario_label)~"scenario (%)"), x = "Year") +
+          coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
+          theme(legend.title = element_blank(), legend.position = "right", axis.title = element_text(size = 12)) +
+          scale_colour_manual(values = TG_colors, labels=TG_list) 
+        
+        ggsave(paste0("output/plots/projections_delta_",ssp_scenario,"_",date,".png"), plot = plot,
+               width = 8, height = 10, dpi = 300)
+        print(paste0("Output: plots/projections_delta_",ssp_scenario,"_",date,".png"))
+        
+      }    
+    }
   
-  #6b.7 to compute delta of zooplankton trophic groups
+  #6b.9 to compute delta of zooplankton trophic groups
 
     compute_zoop_delta_historical <- function(mdls){
       date_projections <- date
@@ -1870,7 +2083,7 @@
         
         df_hist_sel <- df_hist_sel %>% rename_with(~ paste0("hist_", .x))
         
-        df_hist_mean <- df_hist_sel %>% group_by(hist_x, hist_y) %>% summarize(mean_hist_est = mean(hist_estimate, na.rm = T),
+        df_hist_summary <- df_hist_sel %>% group_by(hist_x, hist_y) %>% summarize(mean_hist_est = mean(hist_estimate, na.rm = T),
                                                                                median_hist_est = median(hist_estimate, na.rm = T))
         
         for(j in 1:length(ssp_list)){
@@ -1878,40 +2091,45 @@
           if(file.exists(paste0("output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData"))) {
             
             df_ssp <- readRDS(file=paste0("output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData"))
+              print(paste0(toupper(ssp_list[j])," scenario"))
             
-              #ssp_scenario <- str_extract(basename(ensemble), "ssp\\d{3}")
-              
-              print(paste0("Loaded projections under ",ssp_list[j]," scenario"))
-              
-            df_merged <- df_ssp %>% left_join(df_hist_mean, by = join_by("x"=="hist_x", "y"=="hist_y"))  
-              
-            df_merged <- df_merged %>% mutate(delta = (estimate - mean_hist_est), delta_perc = ((estimate-mean_hist_est)/mean_hist_est)*100)          
+            df_ssp_sel <- df_ssp %>% filter(year >= 2080 & year <= 2100)
             
-            delta_perc_summary <- df_merged %>% 
-              summarise(mean_delta = mean(delta_perc, na.rm =T), 
-                        median_delta = median(delta_perc, na.rm =T), 
-                        Q1_delta = quantile(delta_perc, 0.25, na.rm =T), 
-                        Q3_delta = quantile(delta_perc, 0.75, na.rm =T), 
-                        min_delta = min(delta_perc, na.rm = T),
-                        max_delta = max(delta_perc, na.rm = T))
+            df_ssp_summary <- df_ssp_sel %>% group_by(x,y) %>% summarize(mean_est = mean(estimate, na.rm = T),
+                                                                      median_est = median(estimate, na.rm = T))
+
+            #to merge historical (baseline) and ssp data  
+            df_merged <- df_ssp_summary %>% left_join(df_hist_summary, by = join_by("x"=="hist_x", "y"=="hist_y"))  
             
-            df_merged_median <- df_ssp %>% left_join(df_hist_mean, by = join_by("x"=="hist_x", "y"=="hist_y"))  
+            df_merged <- df_merged %>% mutate(delta = (mean_est - mean_hist_est), delta_perc = ((mean_est-mean_hist_est)/mean_hist_est)*100)          
             
-            df_merged_median <- df_merged %>% mutate(delta = (estimate - median_hist_est), delta_perc = ((estimate-median_hist_est)/median_hist_est)*100)          
+            delta_perc_summary <- df_merged %>% ungroup() %>% 
+              summarise(mean_delta_perc = mean(delta_perc, na.rm =T), 
+                        median_delta_perc = median(delta_perc, na.rm =T), 
+                        Q1_delta_perc = quantile(delta_perc, 0.25, na.rm =T), 
+                        Q3_delta_perc = quantile(delta_perc, 0.75, na.rm =T), 
+                        min_delta_perc = min(delta_perc, na.rm = T),
+                        max_delta_perc = max(delta_perc, na.rm = T))
             
-            delta_perc_median_summary <- df_merged_median %>% 
-              summarise(mean_delta = mean(delta_perc, na.rm =T), 
-                        median_delta = median(delta_perc, na.rm =T), 
-                        Q1_delta = quantile(delta_perc, 0.25, na.rm =T), 
-                        Q3_delta = quantile(delta_perc, 0.75, na.rm =T), 
-                        min_delta = min(delta_perc, na.rm = T),
-                        max_delta = max(delta_perc, na.rm = T))
+            ## to compare median vs mean of estimates
+            # df_merged_median <- df_ssp %>% left_join(df_hist_mean, by = join_by("x"=="hist_x", "y"=="hist_y"))  
+            # 
+            # df_merged_median <- df_merged %>% mutate(delta = (estimate - median_hist_est), delta_perc = ((estimate-median_hist_est)/median_hist_est)*100)          
+            # 
+            # delta_perc_median_summary <- df_merged_median %>% 
+            #   summarise(mean_delta = mean(delta_perc, na.rm =T), 
+            #             median_delta = median(delta_perc, na.rm =T), 
+            #             Q1_delta = quantile(delta_perc, 0.25, na.rm =T), 
+            #             Q3_delta = quantile(delta_perc, 0.75, na.rm =T), 
+            #             min_delta = min(delta_perc, na.rm = T),
+            #             max_delta = max(delta_perc, na.rm = T))
             
             print(TG)
-            print("By mean")
+            #print("By mean")
             print(delta_perc_summary)
-            print("By median")
-            print(delta_perc_median_summary)
+            ## to compare median vs mean of estimates
+            # print("By median")
+            # print(delta_perc_median_summary)
             
           }else {
             print(paste("File does not exist: output/projections/",TG,"_",ssp_list[j],"_",date_projections,".RData",sep=""))
