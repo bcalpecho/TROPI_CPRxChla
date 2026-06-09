@@ -2,17 +2,21 @@
 # DATA PREPARATION AND ANALYSIS #
 ####                          ####
 
+
+#############################
 #### README: How to run? ####
-## A. For replicating the current model, skip steps 1-3 or data preparation steps. 
-# Follow Step 4 onwards using dataframe uploaded in 'data_input' folder.
+#############################
 
-## B. For complete run-through including data preparation, 
-# Raw CPR files must be stored in 'data_input/CPR' 
-# Raw OC-CCI files must be stored in 'data_input/OCCCI' 
-# Follow from the first step (pre-process raw CPR files).
+  # A. For replicating the current version of model and projections, skip steps 1-3 or data preparation steps. 
+  # Follow Step 4 onwards using dataframe uploaded in 'data_input' folder.
+  
+  # B. For complete run-through including data preparation from raw data, 
+  # Raw CPR files must be stored in 'data_input/CPR' 
+  # Raw OC-CCI files must be stored in 'data_input/OCCCI' 
+  # Follow from the first step (pre-process raw CPR files).
 
 
-# 0 Setup ####
+# Setup ####
   # Load functions and set directories
   
   source("functions_bank.R")
@@ -23,7 +27,7 @@
   date <- "04052026"
   survey_list <- c("auscpr", "socpr","npacific","natlantic")
   
-########## Pre-process raw CPR data #########
+########## 0 Pre-process raw CPR data #########
   # Read in raw CPR csv files (includes translation from taxa_name to AphiaID)
   # Outputs: metadata and abundance dataframe for each CPR survey
   
@@ -163,9 +167,9 @@
 
 ########## 5 Assess the Model ##########
   # #to load back the models
-  #   Carni_mdl_zib <- read_rds("output/mdls/Carni_mdl_zib.rds")
-  #   Omni_mdl_zib <- read_rds("output/mdls/Omni_mdl_zib.rds")
-  #   Filter_mdl_zib <- read_rds("output/mdls/Filter_mdl_zib.rds")
+    Carni_mdl_zib <- read_rds("output/mdls/Carni_mdl_zib.rds")
+    Omni_mdl_zib <- read_rds("output/mdls/Omni_mdl_zib.rds")
+    Filter_mdl_zib <- read_rds("output/mdls/Filter_mdl_zib.rds")
     
   #5.1 quantile-quantile plot to assess normality of residuals
     plot_QQ(mdl_list)
@@ -182,35 +186,59 @@
   #5.5 to plot residuals of models with and without the random effects
     plot_residuals(mdl_list)
   
-########## 6b Project Global CPR ##########
-  
-  #6b.1 to project zooplankton trophic group 
-    #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
+########## 6a Generate ensemble of chlos projections ############
+    
+  #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
     ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
-    
-    #process the SSP scenarios one-by-one (One ensemble each SSP scenario)
-    
-  #6b.2 list the selected models (double check the order of mdl_list and names)
+    # list of median ensemble for 'historical', 'ssp126', 'ssp245', 'ssp370', and 'ssp585'
+    # see 'script/6a_generate_ensemble' for steps in generating an ensemble of chlos projections
+    # this requires a Linux environment or virtual machine on Windows 
+      
+########## 6b Project global relative abundance of zooplankton trophic groups ##########
+  
+  #6.1 to project the relative abundance of each zooplankton trophic group by 2100
+    #list the selected models (double check the order of mdl_list and names)
     mdl_list <- list(Carni_mdl_zib, Omni_mdl_zib, Filter_mdl_zib)
     names(mdl_list) <- c("Carni","Omni","Filter")
     
-    #ssp126
-    project_TG_proportions(ensembles_median[1], mdl_list)
-    #ssp245
-    project_TG_proportions(ensembles_median[2], mdl_list)
-    #ssp370
-    project_TG_proportions(ensembles_median[3], mdl_list)
-    #ssp585
-    project_TG_proportions(ensembles_median[4], mdl_list)
+    #baseline: 1980-2000 (historical scenario data) 
+      #to project zooplankton trophic groups annually
+        #historical
+        project_annual_TG_proportions(ensemble = ensembles_median[1], mdls = mdl_list) ##error in merging arrays
+        #SSP 1-2.6
+        project_annual_TG_proportions(ensemble = ensembles_median[2], mdls = mdl_list) ##error in merging arrays
+        #SSP 2-4.5
+        project_annual_TG_proportions(ensemble = ensembles_median[3], mdls = mdl_list) ##error in merging arrays
+        #SSP 3-7.0
+        project_annual_TG_proportions(ensemble = ensembles_median[4], mdls = mdl_list) ##error in merging arrays
+        #SSP 5-8.5
+        project_annual_TG_proportions(ensemble = ensembles_median[5], mdls = mdl_list) ##error in merging arrays
+        
+      #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
+        compute_zoop_delta_historical(mdls = mdl_list)
+
+    #baseline: 2015 (ScenarioMIP year 1)
+      #process the SSP scenarios one-by-one (One ensemble each SSP scenario)
+        project_TG_proportions(ensemble = ensembles_median, mdls = mdl_list)
   
-   #6b.3 to compute for delta of trophic groups between 2015 and 2100
-    compute_zoop_delta(mdl_list)
-  
-  #to see summary of model predictions per model
-    summary_stats_TG(mdl_list)
-    baseline_stats_TG(mdl_list)
-  
-########## 7 Plot visual summary of model ##########
+      #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 2015
+        compute_zoop_delta_2015(mdls = mdl_list)
+
+  #6.2 to see summary statistics of projections per model
+    summary_TG_yr2100(mdls = mdl_list)
+    summary_TG_yr2015(mdls = mdl_list)
+      
+  #6.3 to plot annual mean of relative abundances of projected zooplankton trophic groups from 2015-2100
+    plot_annual_TG_proportions(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+        
+  #6.4 to plot the annual change in relative abundance relative to 1980-2000
+    ##A. to plot per SSP scenario
+      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+
+    ##B. to plot per zooplankton trophic group
+      plot_delta_perTG(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      
+########## 7 Plot visual summary of model ##########  
     
   #7.1 summary for model of carnivores
     plot_model_summary_carnivores(date)
