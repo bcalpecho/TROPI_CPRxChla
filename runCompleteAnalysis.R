@@ -253,9 +253,3 @@
     plot_model_perSurvey_responseScale(date)
 
 ## End ##
-    
-    
-    Filter_historical <- read_rds("output/projections/Filter_historical_04052026.RData")
-    Filter_projections <- read_rds("output/projections/fProjections_Filter_04052026")
-    
-    
