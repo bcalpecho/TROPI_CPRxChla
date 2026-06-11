@@ -2,7 +2,6 @@
 # DATA PREPARATION AND ANALYSIS #
 ####                          ####
 
-
 #############################
 #### README: How to run? ####
 #############################
@@ -19,7 +18,7 @@
 # Setup ####
   # Load functions and set directories
   
-  source("functions_bank.R")
+  source("function_bank.R")
   input_dir <- "data_input/" # where files are read from
   output_dir <- "output/" # where files are written to
   
@@ -214,29 +213,19 @@
         #SSP 5-8.5
         project_annual_TG_proportions(ensemble = ensembles_median[5], mdls = mdl_list) ##error in merging arrays
         
+  #6.2 to compute for delta and see summary statistics of projections per model
       #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
-        compute_zoop_delta_historical(mdls = mdl_list)
-
-    #baseline: 2015 (ScenarioMIP year 1)
-      #process the SSP scenarios one-by-one (One ensemble each SSP scenario)
-        project_TG_proportions(ensemble = ensembles_median, mdls = mdl_list)
-  
-      #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 2015
-        compute_zoop_delta_2015(mdls = mdl_list)
-
-  #6.2 to see summary statistics of projections per model
-    summary_TG_yr2100(mdls = mdl_list)
-    summary_TG_yr2015(mdls = mdl_list)
+      compute_zoop_delta_historical(mdls = mdl_list[c(2,3,4,5)])
       
-  #6.3 to plot annual mean of relative abundances of projected zooplankton trophic groups from 2015-2100
-    plot_annual_TG_proportions(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
-        
-  #6.4 to plot the annual change in relative abundance relative to 1980-2000
-    ##A. to plot per SSP scenario
-      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      #summary statistics by yr 2100
+      summary_TG_yr2100(mdls = mdl_list)
+      
+  #6.3 to plot the annual change relative to 1980-2000
+    ##A. one plot per SSP scenario
+      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,3,4,5)], mdls = mdl_list) #ssp 126, 370, 585
 
-    ##B. to plot per zooplankton trophic group
-      plot_delta_perTG(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+    ##B. one plot per zooplankton trophic group
+      plot_delta_perTG(ensemble = ensembles_median[c(2,3,4,5)], mdls = mdl_list) #ssp 126, 370, 585
       
 ########## 7 Plot visual summary of model ##########  
     

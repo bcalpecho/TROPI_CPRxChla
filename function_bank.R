@@ -1861,49 +1861,71 @@
   #6b.5 to plot the projected proportions of zooplankton trophic groups annually
   
     plot_annual_TG_proportions <- function(ensemble, mdls){
-    for(i in 1:length(mdls)){
-      TG <- names(mdls)[i]
-      if(TG == "Carni"){
-        TG_label <- "carnivorous zooplankton"
-      }else if(TG == "Omni"){
-        TG_label <- "omnivorous zooplankton"
-      }else if(TG == "Filter"){
-        TG_label == "gelatinous filter-feeders"
-      }
-      print(paste0("Model in process: ",TG_label))
-      
-      
-      for(j in 1:length(ensemble)){
+      ssp_list <- c()
+      for(i in 1:length(mdls)){
+        TG <- names(mdls)[i]
+        if(TG == "Carni"){
+          TG_label <- "carnivorous zooplankton"
+        }else if(TG == "Omni"){
+          TG_label <- "omnivorous zooplankton"
+        }else if(TG == "Filter"){
+          TG_label == "gelatinous filter-feeders"
+        }
+        print(paste0("Model in process: ",TG_label))
+        
+        m_projection <- tibble(experiment = character(length = 0),
+                               year = numeric(length = 0),
+                               annual_mean = numeric(length = 0),
+                               annual_sd = numeric(length = 0),
+                               annual_mean_u = numeric(length = 0),
+                               annual_mean_l = numeric(length = 0))
+                          
+        for(j in 1:length(ensemble)){
+  
+          ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
+          if(ssp_scenario == "historical"){
+            print("Skipping historical ensemble from input (ensemble list)")
+            next
+          }else{print(paste0("Projections under ",ssp_scenario," scenario"))}
+          ssp_list <- c(ssp_list, ssp_scenario)
 
-        ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
-        
-        print(paste0("Projections under ",ssp_scenario," scenario"))
-        
-        #1 Read projections from RData 
-        projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
-        print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
-        
-        #2 Calculate annual mean of projections from RData
-        #chla_sqrt, estimate, x, y, year
-        m_projection <- projection %>%
-          group_by(year) %>% 
-          summarise(annual_mean = mean(estimate, na.rm = T), 
-                    annual_conf.low = mean(conf.low, na.rm = T),
-                    annual_conf.high = mean(conf.high, na.rm = T)) 
+          #1 Read projections from RData 
+          projection <- readRDS(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          #print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
           
+          #2 Calculate annual mean of projections from RData
+          #chla_sqrt, estimate, x, y, year
+          projection_calc <- projection %>%
+            group_by(year) %>% 
+            summarise(annual_mean = mean(estimate, na.rm = T), 
+                      annual_sd = sd(estimate, na.rm = T))
+          
+          projection_calc <- projection_calc %>% 
+            mutate(annual_mean_l = mean(annual_sd, na.rm = T),
+                   annual_mean_u = mean(annual_sd, na.rm = T)) 
+          
+          f_projection <- projection_calc %>% 
+            select(c("year","annual_mean","annual_sd","annual_mean_l","annual_mean_u")) %>% 
+            mutate(experiment = enexpr(ssp_scenario))
+            
+          m_projection <- m_projection %>% 
+            rows_insert(f_projection, by = "experiment")
+                      
+        }
+        
         #3  Plot annual mean
         plot <- ggplot(data = m_projection) + pub_theme +
           geom_ribbon(aes(x = year, y = annual_mean,
-                          ymin = annual_conf.low, ymax = annual_conf.high), alpha = 0.3, colour = "blue", linetype=2) +
-          geom_line(aes(x = year, y = annual_mean),colour="blue") +
+                          ymin = annual_mean_l, ymax = annual_mean_u, colour = factor(experiment)), alpha = 0.3, linetype=2) +
+          geom_line(aes(x = year, y = annual_mean, colour=factor(experiment))) +
           labs(y = paste0("Proportion of ",TG_label), x = expression(bold(sqrt("Chl-a")))) +
-          ylim(0, 1)
+          ylim(0, 1) +
+          theme(legend.title = element_blank(), legend.position = "right", axis.title = element_text(size = 12)) +
+          scale_colour_discrete(labels=toupper(ssp_list))
         
-        ggsave(paste0("output/plots/projections_",TG,"_",date,".png"), plot = plot,
+        ggsave(paste0("output/plots/projections_prop_",TG,"_",date,".png"), plot = plot,
                width = 8, height = 10, dpi = 300)
-        print(paste0("output/plots/projections_",TG,"_",date,".png"))
-        
-      }
+        print(paste0("Output: plots/projections_prop_",TG,"_",date,".png"))
     }    
   }
   
@@ -1917,7 +1939,7 @@
         }else if(TG == "Omni"){
           TG_label <- "omnivorous zooplankton"
         }else if(TG == "Filter"){
-          TG_label == "gelatinous filter-feeders"
+          TG_label <- "gelatinous filter-feeders"
         }
         print(paste0("Model in process: ",TG_label))
         
@@ -1974,7 +1996,7 @@
         }else if(TG == "Omni"){
           TG_label <- "omnivorous zooplankton"
         }else if(TG == "Filter"){
-          TG_label == "gelatinous filter-feeders"
+          TG_label <- "gelatinous filter-feeders"
         }
         print(paste0("Model in process: ",TG_label))
         
@@ -2017,7 +2039,7 @@
         
         for(j in 1:length(ensemble)){
           ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}")
-          print(paste0("Projections under ",ssp_scenario," scenario"))
+          #print(paste0("Projections under ",ssp_scenario," scenario"))
           ssp_list <- c(ssp_list, ssp_scenario)
           
           #to include recentPast to 'm_projection' df 
@@ -2053,8 +2075,9 @@
           
         }
         
-        write_rds(m_projection, file = paste0("output/projections/fProjections_",TG,"_",date))
-        print(paste0("Saved projection data: output/projections/fProjections_",TG,"_",date))
+        # #to save merged projection data
+        # write_rds(m_projection, file = paste0("output/projections/fProjections_",TG,"_",date))
+        # print(paste0("Saved projection data: output/projections/fProjections_",TG,"_",date))
         
         #3  Plot delta of annual mean relative to baseline
         plot <- ggplot(data = m_projection) + pub_theme +
@@ -2090,7 +2113,7 @@
           ssp_scenario_label <- "SSP 5-8.5"
         }else{ print("Misspecified SSP scenario")}
           
-        print(paste0("Projections under ",ssp_scenario," scenario"))
+        #print(paste0("Projections under ",ssp_scenario," scenario"))
         
         #to create df for merged projections of each TG
         # m_projection <- tibble(scenario = character(length = 6),
