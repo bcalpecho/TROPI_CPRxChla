@@ -2020,20 +2020,20 @@
         
         recentPast_summary <- recentPast_calc %>%   
           group_by(year) %>% 
-          summarise(annual_median = median(delta, na.rm = T), 
+          summarise(annual_mean = median(delta, na.rm = T), 
                     annual_sd = sd(delta, na.rm = T)) 
         
         recentPast_summary <- recentPast_summary %>% 
-          mutate(annual_median_u = annual_median + annual_sd,
-                 annual_median_l = annual_median - annual_sd)
+          mutate(annual_mean_u = annual_mean + annual_sd,
+                 annual_mean_l = annual_mean - annual_sd)
         
         #empty tibble
         m_projection <- tibble(experiment = character(length = 0),
                                year = numeric(length = 0),
-                               annual_median = numeric(length = 0),
+                               annual_mean = numeric(length = 0),
                                annual_sd = numeric(length = 0),
-                               annual_median_u = numeric(length = 0),
-                               annual_median_l = numeric(length = 0))
+                               annual_mean_u = numeric(length = 0),
+                               annual_mean_l = numeric(length = 0))
         
         ssp_list <- c()
         
@@ -2061,13 +2061,13 @@
             
             projection_summary <- projection_calc %>%   
               group_by(year) %>% 
-              summarise(annual_median = median(delta, na.rm = T), 
+              summarise(annual_mean = median(delta, na.rm = T), 
                         annual_sd = sd(delta, na.rm = T)) %>% 
               mutate(experiment = ssp_scenario)
             
             projection_summary <- projection_summary %>% 
-              mutate(annual_median_u = annual_median + annual_sd,
-                     annual_median_l = annual_median - annual_sd)
+              mutate(annual_mean_u = annual_mean + annual_sd,
+                     annual_mean_l = annual_mean - annual_sd)
           
           #to save each iteration of projection summary to 'm_projection' df 
           m_projection <- m_projection %>% 
@@ -2081,9 +2081,10 @@
         
         #3  Plot delta of annual mean relative to baseline
         plot <- ggplot(data = m_projection) + pub_theme +
-          geom_ribbon(aes(x = year, y = annual_median,
-                          ymin = annual_median_l, ymax = annual_median_u, colour = factor(experiment), fill = factor(experiment)), alpha = 0.1, linetype=2, show.legend = F) +
-          geom_line(aes(x = year, y = annual_median, colour=factor(experiment))) +
+          geom_ribbon(aes(x = year, y = annual_mean,
+                          ymin = annual_mean_l, ymax = annual_mean_u, colour = factor(experiment), fill = factor(experiment)), alpha = 0.1, linetype=2, show.legend = F) +
+          geom_line(aes(x = year, y = annual_mean, colour=factor(experiment))) +
+          geom_hline(yintercept = 0, color = "black", linetype = "dashed" )+
           labs(y = bquote(Delta~"proportion of"~.(TG_label)~"(%)"), x = "Year") +
           coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
           scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
@@ -2128,10 +2129,10 @@
         
         m_projection <- tibble(trophicGroup = character(length = 0),
                                year = numeric(length = 0),
-                               annual_median = numeric(length = 0),
+                               annual_mean = numeric(length = 0),
                                annual_sd = numeric(length = 0),
-                               annual_median_u = numeric(length = 0),
-                               annual_median_l = numeric(length = 0))
+                               annual_mean_u = numeric(length = 0),
+                               annual_mean_l = numeric(length = 0))
         TG_list <- c()
         
         for(i in 1:length(mdls)){
@@ -2167,12 +2168,12 @@
           
           recentPast_summary <- recentPast_calc %>%   
             group_by(year) %>% 
-            summarise(annual_median = median(delta, na.rm = T), 
+            summarise(annual_mean = mean(delta, na.rm = T), 
                       annual_sd = sd(delta, na.rm = T)) 
           
           recentPast_summary <- recentPast_summary %>% 
-            mutate(annual_median_u = annual_median + annual_sd,
-                   annual_median_l = annual_median - annual_sd)
+            mutate(annual_mean_u = annual_mean + annual_sd,
+                   annual_mean_l = annual_mean - annual_sd)
           
           #to include recentPast to 'm_projection' df 
           recentPast_summary <- recentPast_summary %>% 
@@ -2192,15 +2193,15 @@
           
           projection_summary <- projection_calc %>%   
             group_by(year) %>% 
-            summarise(annual_median = median(delta, na.rm = T), 
+            summarise(annual_mean = mean(delta, na.rm = T), 
                       annual_sd = sd(delta, na.rm = T)) %>% 
             mutate(trophicGroup = TG) 
           
           projection_summary$trophicGroup <- factor(projection_summary$trophicGroup, levels = c("Carni","Omni","Filter"))
             
           projection_summary <- projection_summary %>% 
-            mutate(annual_median_u = annual_median + annual_sd,
-                   annual_median_l = annual_median - annual_sd)
+            mutate(annual_mean_u = annual_mean + annual_sd,
+                   annual_mean_l = annual_mean - annual_sd)
           
           #to save each iteration of projection summary to 'm_projection' df 
           m_projection <- m_projection %>% 
@@ -2211,9 +2212,10 @@
         TG_colors <- c("Filter" = "#00aedb", "Carni" = "#d11141", "Omni" = "#00b159")
         
         plot <- ggplot(data = m_projection) + pub_theme +
-          geom_ribbon(aes(x = year, y = annual_median,
-                          ymin = annual_median_l, ymax = annual_median_u, colour = trophicGroup, fill = trophicGroup), alpha = 0.1, linetype=2, show.legend = F) +
-          geom_line(aes(x = year, y = annual_median, colour=factor(trophicGroup))) +
+          geom_ribbon(aes(x = year, y = annual_mean,
+                          ymin = annual_mean_l, ymax = annual_mean_u, colour = trophicGroup, fill = trophicGroup), alpha = 0.1, linetype=2, show.legend = F) +
+          geom_line(aes(x = year, y = annual_mean, colour=factor(trophicGroup))) +
+          geom_hline(yintercept = 0, color = "black", linetype = "dashed" )+
           labs(colour = "Trophic Group", y = bquote(Delta~"proportion under"~.(ssp_scenario_label)~"scenario (%)"), x = "Year") +
           coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
           scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
@@ -2300,6 +2302,68 @@
       }
   }
   
+  #6b.10 to assign into projections the ocean basins (Fay & Mckinley, 2014; https://doi.pangaea.de/10.1594/PANGAEA.828650)
+    
+    assign_ocean_basins <- function(ensemble, mdls){
+      
+      #Ray & McKinley (2014) Global open-ocean biomes
+      time_varying_biomes <- read_ncdf("data_input/biomes/Time_Varying_Biomes.nc", var = "TimeVaryingBiomes", show_col_types = FALSE)      
+      
+      time_varying_biomes <- st_set_dimensions(time_varying_biomes, xy = c("lon","lat"))
+      
+      time_varying_biomes <- aperm(time_varying_biomes, c("lon","lat","year")) #reorder the dimensions
+      
+      mean_biomes <- st_apply(time_varying_biomes, c(1:2), mean)
+      
+      mean_biomes <- as.data.frame(mean_biomes, xy = "true") %>% 
+        rename("biome_17tier" = "mean")
+        #results to 38476 non-NA mean/biome
+      
+      # mean_biomes <- mean_biomes %>% 
+      #   st_as_sf(coords = c("x", "y")) %>% 
+      #   rename("biome"="mean")
+      
+      #Heneghan et al 2023 open-ocean biomes (tropical, temperate, polar)
+      biomes_Heneghanetal <- read_csv("data_input/biomes/biomes3.csv") %>% 
+        rename("biome_3tier" = "Biome")
+      
+      for(i in 1:length(mdls)){
+        TG <- names(mdls)[i]
+          
+        for(j in 1:length(ensemble)){
+          ssp_scenario <- str_extract(basename(ensemble[[j]]), "ssp\\d{3}|historical")
+          
+          #1 Read projections from RData 
+          projection <- read_rds(file=paste0("output/projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          print(paste0("Input: projections/",TG,"_",ssp_scenario,"_",date,".RData"))
+          
+          # if(ssp_scenario == "historical"){
+          #   projection <- projection %>% 
+          #     filter(year >= 1980 & year <= 2000) 
+          # }else if(ssp_scenario %in% c("ssp126","ssp245","ssp370","ssp585")){
+          #   projection <- projection
+          # }else{stop("Unrecognized experiment")}
+          
+          # #set coordinates
+          # projection <- projection %>% 
+          #   st_as_sf(coords = c("x", "y")) 
+          
+          #match by coordinate
+          #df <- st_intersection(projection, mean_biomes)
+          df <- projection %>% 
+            left_join(mean_biomes, by = c("x" = "lon", "y"="lat")) %>% 
+            left_join(biomes_Heneghanetal, by = c("x" = "Lon", "y" = "Lat"))
+          
+          #to save predictions in an R data output 
+          saveRDS(df, file=paste("output/projections_biome/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+          print(paste("Output saved: projections_biome/",TG,"_",ssp_scenario,"_",date,".RData",sep=""))
+          
+        }
+      }
+    }
+    
+    
+    
 ## 7_plot_modelsummary #############################################################
   #to plot visual summary (fixed + random effects) of glmmTMB model
 

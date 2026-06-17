@@ -188,7 +188,8 @@
 ########## 6a Generate ensemble of chlos projections ############
     
   #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
-    ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
+    #ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
+    ensembles_mean <- list.files(file.path("data_input","ensemble_chlos","mean","chlos"), full.names = TRUE)
     # list of median ensemble for 'historical', 'ssp126', 'ssp245', 'ssp370', and 'ssp585'
     # see 'script/6a_generate_ensemble' for steps in generating an ensemble of chlos projections
     # this requires a Linux environment or virtual machine on Windows 
@@ -203,29 +204,31 @@
     #baseline: 1980-2000 (historical scenario data) 
       #to project zooplankton trophic groups annually
         #historical
-        project_annual_TG_proportions(ensemble = ensembles_median[1], mdls = mdl_list) ##error in merging arrays
+        project_annual_TG_proportions(ensemble = ensembles_mean[1], mdls = mdl_list) ##error in merging arrays
         #SSP 1-2.6
-        project_annual_TG_proportions(ensemble = ensembles_median[2], mdls = mdl_list) ##error in merging arrays
+        project_annual_TG_proportions(ensemble = ensembles_mean[2], mdls = mdl_list) ##error in merging arrays
         #SSP 2-4.5
-        project_annual_TG_proportions(ensemble = ensembles_median[3], mdls = mdl_list) ##error in merging arrays
+        project_annual_TG_proportions(ensemble = ensembles_mean[3], mdls = mdl_list) ##error in merging arrays
         #SSP 3-7.0
-        project_annual_TG_proportions(ensemble = ensembles_median[4], mdls = mdl_list) ##error in merging arrays
+        project_annual_TG_proportions(ensemble = ensembles_mean[4], mdls = mdl_list) ##error in merging arrays
         #SSP 5-8.5
-        project_annual_TG_proportions(ensemble = ensembles_median[5], mdls = mdl_list) ##error in merging arrays
+        project_annual_TG_proportions(ensemble = ensembles_mean[5], mdls = mdl_list) ##error in merging arrays
         
+      #to assign open-ocean regions/biomes (Ray & McKinley, 2014; Heneghan et al., 2023)
+        assign_ocean_basins(ensemble = ensembles_mean, mdls = mdl_list)
   #6.2 to compute for delta and see summary statistics of projections per model
       #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
-      compute_zoop_delta_historical(mdls = mdl_list[c(2,3,4,5)])
+      compute_zoop_delta_historical(mdls = mdl_list)
       
       #summary statistics by yr 2100
       summary_TG_yr2100(mdls = mdl_list)
       
   #6.3 to plot the annual change relative to 1980-2000
     ##A. one plot per SSP scenario
-      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,3,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
 
     ##B. one plot per zooplankton trophic group
-      plot_delta_perTG(ensemble = ensembles_median[c(2,3,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      plot_delta_perTG(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
       
 ########## 7 Plot visual summary of model ##########  
     
