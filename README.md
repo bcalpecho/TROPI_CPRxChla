@@ -1,6 +1,6 @@
 # Modelling Continuous Plankton Recorder Surveys
 
-Repository for a research project on assessing the changes of the global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. The project uses the combined data of CPR Surveys of the Australian CPR, the Atlantic CPR, the North Pacific CPR, and the Southern Ocean CPR. 
+Repository for a research project on assessing the changes of the global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. 
 
 ### Data availability.
 Our findings are supported by open-access datasets. The data of Continuous Plankton Recorder surveys are available in their respective online repositories. 
@@ -14,8 +14,8 @@ The CMIP6 data are archived and distributed by the Earth System Grid Federation 
 
 ### Scripts.
 The data preparation and analysis can be performed in two ways: 
-* Through a single script ```runCompleteAnalysis.R```.
-* Through modular scripts in ```scripts``` folder.
+* Through a single script ```runCompleteAnalysis.R``` (Current Version).
+* Through modular scripts in ```scripts``` folder (MSc thesis Version).
 
   * ```data_input``` contains the CPR abundance tables, trait table, and combined data of the CPR Surveys.
   * ```1_generate_traits.R``` assign trophic groups to provided zooplankton taxon list based on trait tables.
@@ -23,7 +23,7 @@ The data preparation and analysis can be performed in two ways:
   * ```3_generate_completeDF.R``` finalizes the complete data frame comprised of zooplankton (relative abundance and assigned traits) and chlorophyll data.
   * ```4_model_globalCPR.R``` fit the model and generates the model predictions.
   * ```5_predict_globalCPR.R``` generate model predictions given the ensemble data.
-  * ```6a_generate_ensemble.R``` generate a median ensemble of chlos projections from ten CMIP6 ESM models.
+  * ```6a_generate_ensemble.R``` generate a median ensemble of chlos projections from five CMIP6 ESM models.
   * ```6b_assess_models.R``` assess the quality of fit of GLMs and produce the supplementary figures for model assessment.
   * ```7_plot_modelsummary.R``` produce visual summary of selected models (Figures 1 and 2; Supplementary Figures 1 and 2).
   * ```helper_CPR.R``` additional functions for visualizing and preparing the zooplankton data. Includes creation of Figure 3 (Map of Global CPR).
@@ -33,5 +33,4 @@ The data preparation and analysis can be performed in two ways:
 
 The Global Alliance of Continuous Plankton Recorders have provided the data of the AusCPR, the Atlantic CPR, the North Pacific CPR, and the Southern Ocean CPR surveys. Data for AusCPR were sourced from Australia’s Integrated Marine Observing System (IMOS) – IMOS is enabled by the National Collaborative Research Infrastructure Strategy (NCRIS). Data for the Atlantic CPR were sourced from the Marine Biological Association of the United Kingdom through the UK Archive for Marine Species and Habitats Data (DASSH). Data for the North Pacific CPR were sourced from the North Pacific Marine Science Organization through the DASSH. Data for the Southern Ocean CPR were sourced from the Scientific Committee on Antarctic Research (SCAR) sponsored Southern Ocean CPR (SO-CPR) Survey Database hosted by the Australian Antarctic Data Centre. 
 
-We hope that this work provides insights into how zooplankton is likely to respond to ongoing and future accelerating climate-driven changes in phytoplankton abundance and cell size. 
-If you have any questions or comments, please send a mail at bryan.alpecho@ulb.be. 
+We hope that this work provides insights into how zooplankton is likely to respond to ongoing and future accelerating climate-driven changes in phytoplankton abundance and cell size. If you have any questions or comments, please send a mail at bryan.alpecho@ulb.be. 
