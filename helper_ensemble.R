@@ -199,7 +199,8 @@ pub_theme <- theme_classic(base_size = 10, base_family = "sans") + # Family incl
       geom_ribbon(aes(x = year, y = annual_median,
                       ymin = annual_median_l, ymax = annual_median_u, colour = factor(experiment), fill = factor(experiment)), alpha = 0.1, linetype=2, show.legend = F) +
       geom_line(aes(x = year, y = annual_median, colour=factor(experiment))) +
-      labs(y = expression(bold(sqrt("Chl-a"))), x = "Year") +
+      geom_hline(yintercept = 0, color = "black", linetype = "dashed" )+
+      labs(y = bquote(Delta~sqrt("Chl-a")~"(%)"), x = "Year") +
       coord_cartesian(ylim = ylims, xlim = c(1980,2100)) +
       scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
       theme(legend.title = element_blank(), legend.position = "right", axis.title = element_text(size = 12)) +

@@ -2,7 +2,6 @@
 # DATA PREPARATION AND ANALYSIS #
 ####                          ####
 
-
 #############################
 #### README: How to run? ####
 #############################
@@ -19,7 +18,7 @@
 # Setup ####
   # Load functions and set directories
   
-  source("functions_bank.R")
+  source("function_bank.R")
   input_dir <- "data_input/" # where files are read from
   output_dir <- "output/" # where files are written to
   
@@ -166,7 +165,7 @@
     remove(i)}
 
 ########## 5 Assess the Model ##########
-  # #to load back the models
+  # to load back the models
     Carni_mdl_zib <- read_rds("output/mdls/Carni_mdl_zib.rds")
     Omni_mdl_zib <- read_rds("output/mdls/Omni_mdl_zib.rds")
     Filter_mdl_zib <- read_rds("output/mdls/Filter_mdl_zib.rds")
@@ -190,53 +189,89 @@
     
   #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
     ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
+    #ensembles_mean <- list.files(file.path("data_input","ensemble_chlos","mean","chlos"), full.names = TRUE)
     # list of median ensemble for 'historical', 'ssp126', 'ssp245', 'ssp370', and 'ssp585'
     # see 'script/6a_generate_ensemble' for steps in generating an ensemble of chlos projections
     # this requires a Linux environment or virtual machine on Windows 
-      
+
 ########## 6b Project global relative abundance of zooplankton trophic groups ##########
   
-  #6.1 to project the relative abundance of each zooplankton trophic group by 2100
-    #list the selected models (double check the order of mdl_list and names)
+  #list the selected models (double check the order of mdl_list and names)
     mdl_list <- list(Carni_mdl_zib, Omni_mdl_zib, Filter_mdl_zib)
     names(mdl_list) <- c("Carni","Omni","Filter")
     
-    #baseline: 1980-2000 (historical scenario data) 
-      #to project zooplankton trophic groups annually
-        #historical
-        project_annual_TG_proportions(ensemble = ensembles_median[1], mdls = mdl_list) ##error in merging arrays
-        #SSP 1-2.6
-        project_annual_TG_proportions(ensemble = ensembles_median[2], mdls = mdl_list) ##error in merging arrays
-        #SSP 2-4.5
-        project_annual_TG_proportions(ensemble = ensembles_median[3], mdls = mdl_list) ##error in merging arrays
-        #SSP 3-7.0
-        project_annual_TG_proportions(ensemble = ensembles_median[4], mdls = mdl_list) ##error in merging arrays
-        #SSP 5-8.5
-        project_annual_TG_proportions(ensemble = ensembles_median[5], mdls = mdl_list) ##error in merging arrays
-        
-      #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
-        compute_zoop_delta_historical(mdls = mdl_list)
-
-    #baseline: 2015 (ScenarioMIP year 1)
-      #process the SSP scenarios one-by-one (One ensemble each SSP scenario)
-        project_TG_proportions(ensemble = ensembles_median, mdls = mdl_list)
-  
-      #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 2015
-        compute_zoop_delta_2015(mdls = mdl_list)
-
-  #6.2 to see summary statistics of projections per model
-    summary_TG_yr2100(mdls = mdl_list)
-    summary_TG_yr2015(mdls = mdl_list)
+  #USING THE ENSEMBLE  
+    #6.1 to project the relative abundance of each zooplankton trophic group by 2100
       
-  #6.3 to plot annual mean of relative abundances of projected zooplankton trophic groups from 2015-2100
-    plot_annual_TG_proportions(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      #baseline: 1980-2000 (historical scenario data) 
+        #to project zooplankton trophic groups annually
+          #historical
+          project_annual_TG_proportions(ensemble = ensembles_median[1], mdls = mdl_list) ##error in merging arrays
+          #SSP 1-2.6
+          project_annual_TG_proportions(ensemble = ensembles_median[2], mdls = mdl_list) ##error in merging arrays
+          #SSP 2-4.5
+          project_annual_TG_proportions(ensemble = ensembles_median[3], mdls = mdl_list) ##error in merging arrays
+          #SSP 3-7.0
+          project_annual_TG_proportions(ensemble = ensembles_median[4], mdls = mdl_list) ##error in merging arrays
+          #SSP 5-8.5
+          project_annual_TG_proportions(ensemble = ensembles_median[5], mdls = mdl_list) ##error in merging arrays
+          
+        #to assign open-ocean regions/biomes (Ray & McKinley, 2014; Heneghan et al., 2023)
+          assign_ocean_basins(ensemble = ensembles_median, mdls = mdl_list)
+    
+    #6.2 summary statistics of projections per model
+        #summary statistics by yr 2100
+          summary_TG_yr2100(mdls = mdl_list)
+          
+        #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
+          #at global and biome-scale 
+          #3-tier (polar, temperate, and tropical)
+          compute_biome_delta_historical(mdls = mdl_list, region = "3tier")
+          
+          #5-tier
+          compute_biome_delta_historical(mdls = mdl_list, region = "5tier")
+          
+          #17-tier
+          compute_biome_delta_historical(mdls = mdl_list, region = "17tier")
+          
+    #6.3 to compute & plot the annual change relative to 1980-2000
+      #to compute annual delta
+        compute_annual_delta(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp126, 370, 585
+      
+        compute_annual_delta_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list)
         
-  #6.4 to plot the annual change in relative abundance relative to 1980-2000
-    ##A. to plot per SSP scenario
-      plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
-
-    ##B. to plot per zooplankton trophic group
-      plot_delta_perTG(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      ##A. one plot per SSP scenario
+        plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+  
+        plot_delta_perSSPscenario_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+        
+      ##B. one plot per zooplankton trophic group
+        plot_delta_perTG(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+        
+        plot_delta_perTG_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+        
+  #USING INDIVIDUAL ESMs
+    #load individual ESMs
+      esm_list <- list.files(file.path("data_input","esm_chlos"), full.names = T)
+      
+    #6.1 to project the relative abundance of each zooplankton trophic group by 2100
+      #historical
+      perESM_project_TG_proportions(esms = esm_list[c(11)], mdls = mdl_list[2:3]) ##error in merging arrays
+      
+    #6.2 summary statistics of projections per model
+      perESM_assign_ocean_basins(esms = esm_list, mdls = mdl_list)
+      
+      #3-tier (polar, temperate, and tropical)
+      perESM_compute_biome_delta(esms = esm_list, mdls = mdl_list, region = "3tier")
+      
+    #6.3 to compute & plot the annual change relative to 1980-2000
+      #to compute annual delta
+      perESM_compute_annual_delta(esms = esm_list, mdls = mdl_list) #ssp126, 370, 585
+      
+      ##A. one plot per SSP scenario
+      perESM_plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
+      ##B. one plot per zooplankton trophic group
+      perESM_plot_delta_perTG(esms = esm_list, mdls = mdl_list) #ssp 126, 370, 585
       
 ########## 7 Plot visual summary of model ##########  
     
