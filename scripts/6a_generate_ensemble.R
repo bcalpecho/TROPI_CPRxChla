@@ -11,17 +11,13 @@
 # devtools::install_github("SnBuenafe/hotrstuff")
 
 #List of ESMs used in generating ensembles
-## ACCESS-ESM1-5
-## CanESM5-1
 ## IPSL-CM6A-LR
-## CESM2-WACCM
 ## CMCC-ESM2
-## MPI-ESM1-2-LR
-## MPI-ESM-2-HR
-## NorESM2-LM
-## NorESM2-MM
+## CNRM-ESM2-1
+## GFDL-ESM4
+## UKESM1-0-LL
 
-#load packages
+# load packages
   library(hotrstuff)
   library(tidyverse)
 
@@ -161,3 +157,4 @@
 ##End
 #05062026 - added historical scenario
 #09062026 - removed CanESM5; kept CanESM5-1
+#12061015 - updated ensemble composition following Petrik et al (2022)  

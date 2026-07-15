@@ -31,7 +31,6 @@
 #01 to visualize and summarize the ensemble of chlos projections
     
     #plot annual mean of chlos median ensemble from 1980-2100
-    #ssp126
     plot_delta_chlos(ensembles_median[c(2,3,4,5)])
     
      #to plot delta (2100 relative to 2015 chlos)

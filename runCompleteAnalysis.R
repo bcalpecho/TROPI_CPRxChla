@@ -201,6 +201,9 @@
     names(mdl_list) <- c("Carni","Omni","Filter")
     
   #USING THE ENSEMBLE  
+    #6.0 to plot annual mean of chlos median ensemble from 1980-2100
+    plot_delta_chlos(ensemble = ensembles_median[c(2,4,5)]) 
+    
     #6.1 to project the relative abundance of each zooplankton trophic group by 2100
       
       #baseline: 1980-2000 (historical scenario data) 
@@ -254,24 +257,24 @@
     #load individual ESMs
       esm_list <- list.files(file.path("data_input","esm_chlos"), full.names = T)
       
+      perESM_plot_delta_chlos(esms = esm_list)
+      
     #6.1 to project the relative abundance of each zooplankton trophic group by 2100
       #historical
-      perESM_project_TG_proportions(esms = esm_list[c(11)], mdls = mdl_list[2:3]) ##error in merging arrays
+      perESM_project_TG_proportions(esms = esm_list, mdls = mdl_list) ##error in merging arrays
       
     #6.2 summary statistics of projections per model
       perESM_assign_ocean_basins(esms = esm_list, mdls = mdl_list)
       
-      #3-tier (polar, temperate, and tropical)
+      #compute for 3-tier ocean biomes (polar, temperate, and tropical)
       perESM_compute_biome_delta(esms = esm_list, mdls = mdl_list, region = "3tier")
       
     #6.3 to compute & plot the annual change relative to 1980-2000
       #to compute annual delta
       perESM_compute_annual_delta(esms = esm_list, mdls = mdl_list) #ssp126, 370, 585
       
-      ##A. one plot per SSP scenario
-      perESM_plot_delta_perSSPscenario(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
-      ##B. one plot per zooplankton trophic group
-      perESM_plot_delta_perTG(esms = esm_list, mdls = mdl_list) #ssp 126, 370, 585
+      ##A. one plot per zooplankton trophic group
+      perESM_plot_delta_perTG(mdls = mdl_list) #ssp 126, 370, 585
       
 ########## 7 Plot visual summary of model ##########  
     
