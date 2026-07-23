@@ -35,6 +35,7 @@
       }
     }
   )
+  print("Loaded packages - ready to run functions")
   rm(package.check, packages)
   
 ## Pre-process CPR files ###############################################
@@ -2187,49 +2188,6 @@
             filter(trophicGroup == TG) %>% 
             filter(region == regions[k])
           
-          # historical <- readRDS(file=paste0("output/projections_biome/",TG,"_historical_",date,".RData")) 
-          # #print(paste0("Loaded historical data: projections_biome/",TG,"_historical_",date,".RData"))
-          # 
-          # historical <- add_ocean_basins_lbls(historical)
-          #   
-          # if(regions[k] == "Global"){
-          #   curr_sel_hist <- historical
-          # }else{
-          #   curr_sel_hist <- historical %>% filter(biome_3tier_lbls == regions[k])
-          # }
-          # print(paste0("Region in process: ",regions[k]))
-          # 
-          # #to subset baseline (1980-2000) and recent past (1980-2014)
-          # baseline <- curr_sel_hist %>% 
-          #   filter(year >= 1980 & year <= 2000) %>%
-          #   group_by(x,y) %>% 
-          #   summarize("hist_estimate" = mean(estimate, na.rm = T)) #mean or median?
-          # 
-          # #to compute for delta in recent past relative to baseline (1980-2000)
-          # recentPast <- curr_sel_hist %>% 
-          #   filter(year >= 1980 & year <= 2014) 
-          # 
-          # recentPast_calc <- recentPast %>% 
-          #   left_join(baseline, by = join_by("x","y")) %>% 
-          #   mutate(delta_perc = ((estimate - hist_estimate)/hist_estimate) * 100)
-          # 
-          # recentPast_summary <- recentPast_calc %>%   
-          #   group_by(year) %>% 
-          #   summarise(annual_mean = mean(delta_perc, na.rm = T), 
-          #             annual_sd = sd(delta_perc, na.rm = T)) 
-          # 
-          # recentPast_summary <- recentPast_summary %>% 
-          #   mutate(annual_mean_u = annual_mean + annual_sd,
-          #          annual_mean_l = annual_mean - annual_sd)
-          # 
-          # #empty tibble
-          # m_projection <- tibble(experiment = character(length = 0),
-          #                        year = numeric(length = 0),
-          #                        annual_mean = numeric(length = 0),
-          #                        annual_sd = numeric(length = 0),
-          #                        annual_mean_u = numeric(length = 0),
-          #                        annual_mean_l = numeric(length = 0))
-          # 
           ssp_list <- c()
           
           for(j in 1:length(ensemble)){
@@ -2248,51 +2206,19 @@
             
             ssp_list <- c(ssp_list, ssp_scenario_label)
             
-            # 
-            # #to include recentPast to 'm_projection' df 
-            # recentPast_summary <- recentPast_summary %>% 
-            #   mutate(experiment = ssp_scenario) #in order to merge recentPast data with the future scenarios
-            # m_projection <- m_projection %>% 
-            #   rows_insert(recentPast_summary, by = "experiment") 
-            # 
-            # #for(k in 1:length(regions)){
-            #   #to process scenario experiment data 
-            #   #1 Read projections from RData 
-            #   projection <- readRDS(file=paste0("output/projections_biome/",TG,"_",ssp_scenario,"_",date,".RData"))
-            #   #print(paste0("Input: projections_biome/",TG,"_",ssp_scenario,"_",date,".RData"))
-            #   
-            #   projection <- add_ocean_basins_lbls(projection)
-            #     
-            #   if(regions[k] == "Global"){
-            #     curr_sel_future <- projection
-            #   }else{
-            #     curr_sel_future <- projection %>% filter(biome_3tier_lbls == regions[k])
-            #   }
-            #   
-            #   #2 Calculate annual mean of projections from RData
-            #   #chla_sqrt, estimate, x, y, year
-            #   projection_calc <- curr_sel_future %>% 
-            #     left_join(baseline, by = join_by("x","y")) %>% 
-            #     mutate(delta_perc = ((estimate - hist_estimate)/hist_estimate) * 100)
-            #   
-            #   projection_summary <- projection_calc %>%   
-            #     group_by(year) %>% 
-            #     summarise(annual_mean = median(delta_perc, na.rm = T), 
-            #               annual_sd = sd(delta_perc, na.rm = T)) %>% 
-            #     mutate(experiment = ssp_scenario)
-            #   
-            #   projection_summary <- projection_summary %>% 
-            #     mutate(annual_mean_u = annual_mean + annual_sd,
-            #            annual_mean_l = annual_mean - annual_sd)
-            
-            # #to save each iteration of projection summary to 'm_projection' df 
-            # m_projection <- m_projection %>% 
-            #   rows_append(projection_summary)
-              
               #to plot delta of annual mean relative to baseline
               plot_lbl <- paste0(TG,"_",regions[k],"_plot")
-
+              
               ssp_colors <- c("ssp126" = "#332288", "ssp370" = "#44AA99", "ssp585" = "#AA4499")
+              #ylims <- round(c(min(sel_projection$annual_mean_l),max(sel_projection$annual_mean_u)),0)
+              
+              if(TG == "Omni"){
+                ymin = -5
+                ymax = 5
+              }else{
+                ymin = -25
+                ymax = 25
+              }
               
               plot <- ggplot(data = sel_projection) + pub_theme +
                 geom_ribbon(aes(x = year, y = annual_mean,
@@ -2301,7 +2227,7 @@
                 geom_line(aes(x = year, y = annual_mean, colour=factor(experiment))) +
                 geom_hline(yintercept = 0, color = "black", linetype = "dashed") +
                 labs(y = bquote(Delta~"proportion (%)"), x = "") +
-                coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
+                coord_cartesian(ylim = round(c(ymin,ymax),0), xlim = c(1980,2100)) +
                 scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
                 scale_colour_manual(values = ssp_colors, labels=ssp_list, 
                                     aesthetics = c("colour", "fill")) +
@@ -2322,26 +2248,17 @@
         # print(paste0("Saved projection data: output/projections/fProjections_",TG,"_",date))
       }
       
-      #to merge plots
-      #combine
-      # design <- "
-      #             AB
-      #             CD
-      #             EF
-      #             GH
-      #           "
-      
       Carni_Global_plot <- Carni_Global_plot +
-        annotate("text", x = 1980, y = -4, label = "Global", parse = T, size = 3, hjust = 0) +
-        annotate("text", x = 2040, y = 5, label = "Carnivores", size = 3, hjust = 0.5)
+        annotate("text", x = 1980, y = -20, label = "Global", parse = T, size = 3, hjust = 0) +
+        annotate("text", x = 2040, y = 25, label = "Carnivores", size = 3, hjust = 0.5)
       Carni_Polar_plot <- Carni_Polar_plot +
-        annotate("text", x = 1980, y = -4, label = "Polar", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -20, label = "Polar", parse = T, size = 3, hjust = 0)
       Carni_Temperate_plot <- Carni_Temperate_plot +
-        annotate("text", x = 1980, y = -4, label = "Temperate", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -20, label = "Temperate", parse = T, size = 3, hjust = 0)
       Carni_Tropical_plot <- Carni_Tropical_plot + labs(x = "Year") +
-        annotate("text", x = 1980, y = -4, label = "Tropical", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -20, label = "Tropical", parse = T, size = 3, hjust = 0)
       Filter_Global_plot <- Filter_Global_plot +
-        annotate("text", x = 2040, y = 5, label = "Gelatinous filter-feeders", size = 3, hjust = 0.5)
+        annotate("text", x = 2040, y = 25, label = "Gelatinous filter-feeders", size = 3, hjust = 0.5)
       Filter_Tropical_plot <- Filter_Tropical_plot + labs(x = "Year") 
       Omni_Global_plot <- Omni_Global_plot +
         annotate("text", x = 2040, y = 5, label = "Omnivores", size = 3, hjust = 0.5)
@@ -2487,24 +2404,7 @@
         }else{ print("Misspecified SSP scenario")}
           
         #print(paste0("Projections under ",ssp_scenario," scenario"))
-        
-        #to create df for merged projections of each TG
-        # m_projection <- tibble(scenario = character(length = 6),
-        #                        trophicGroup = character(length = 6),
-        #                        chla_sqrt = numeric(length = 3),
-        #                        x = numeric(length = 3),
-        #                        y = numeric(length = 3),
-        #                        year = numeric(length = 4),
-        #                        estimate = numeric(length = 3),
-        #                        conf.low = numeric(length = 3),
-        #                        conf.high = numeric(length = 3))
-        
-        # m_projection <- tibble(trophicGroup = character(length = 0),
-        #                        year = numeric(length = 0),
-        #                        annual_mean = numeric(length = 0),
-        #                        annual_sd = numeric(length = 0),
-        #                        annual_mean_u = numeric(length = 0),
-        #                        annual_mean_l = numeric(length = 0))
+
         TG_list <- c()
         
         for(i in 1:length(mdls)){
@@ -2607,6 +2507,7 @@
             #to plot delta of annual mean relative to baseline
             plot_lbl <- paste0(ssp_scenario,"_",regions[k],"_plot")
             
+            ylims <- round(c(min(sel_projection$annual_mean_l),max(sel_projection$annual_mean_u)),0)
             #to plot delta of annual mean relative to baseline per trophic group in a single plot
             TG_colors <- c("Filter" = "#00aedb", "Carni" = "#d11141", "Omni" = "#00b159")
             
@@ -2626,7 +2527,7 @@
               geom_line(aes(x = year, y = annual_mean, colour=factor(trophicGroup)), show.legend = F) +
               geom_hline(yintercept = 0, color = "black", linetype = "dashed")+
               labs(colour = "Trophic Group", y = bquote(Delta~"proportion (%)"), x = "") +
-              coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
+              coord_cartesian(ylim = round(c(-20,20),0), xlim = c(1980,2100)) +
               scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
               scale_colour_manual(values = TG_colors, labels=c("Carnivores", "Gelatinous filter-feeders", "Omnivores"), aesthetics = c("fill","colour")) +
               theme(legend.title = element_blank(), 
@@ -2646,18 +2547,18 @@
       }
       
       ssp126_Global_plot <- ssp126_Global_plot + 
-        annotate("text", x = 1980, y = -4, label = "Global", parse = T, size = 3, hjust = 0) +
-        annotate("text", x = 2040, y = 5, label = "SSP 1-2.6", size = 3, hjust = 0.5)
+        annotate("text", x = 1980, y = -15, label = "Global", parse = T, size = 3, hjust = 0) +
+        annotate("text", x = 2040, y = 20, label = "SSP 1-2.6", size = 3, hjust = 0.5)
       ssp370_Global_plot <- ssp370_Global_plot + 
-        annotate("text", x = 2040, y = 5, label = "SSP 3-7.0", size = 3, hjust = 0.5)
+        annotate("text", x = 2040, y = 20, label = "SSP 3-7.0", size = 3, hjust = 0.5)
       ssp585_Global_plot <- ssp585_Global_plot + 
-        annotate("text", x = 2040, y = 5, label = "SSP 5-8.5", size = 3, hjust = 0.5)
+        annotate("text", x = 2040, y = 20, label = "SSP 5-8.5", size = 3, hjust = 0.5)
       ssp126_Polar_plot <- ssp126_Polar_plot + 
-        annotate("text", x = 1980, y = -4, label = "Polar", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -15, label = "Polar", parse = T, size = 3, hjust = 0)
       ssp126_Temperate_plot <- ssp126_Temperate_plot +
-        annotate("text", x = 1980, y = -4, label = "Temperate", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -15, label = "Temperate", parse = T, size = 3, hjust = 0)
       ssp126_Tropical_plot <- ssp126_Tropical_plot + labs(x = "Year") +
-        annotate("text", x = 1980, y = -4, label = "Tropical", parse = T, size = 3, hjust = 0)
+        annotate("text", x = 1980, y = -15, label = "Tropical", parse = T, size = 3, hjust = 0)
       ssp370_Tropical_plot <- ssp370_Tropical_plot + labs(x = "Year") 
       ssp585_Tropical_plot <- ssp585_Tropical_plot + labs(x = "Year")
       
@@ -3024,9 +2925,22 @@
             df_merged <- df_merged %>% mutate(delta = (mean_est - mean_hist_est), delta_perc = ((mean_est-mean_hist_est)/mean_hist_est)*100)          
             
             #Wilcox test for global
-            future_dat <- add_ocean_basins_lbls(df_ssp_sel)
-            global_test_data <- rbind(baseline_dat %>% dplyr::select(c("scenario", "estimate")), future_dat %>% dplyr::select(c("scenario", "estimate"))) 
-            global_test <- wilcox.test(estimate ~ scenario, data = global_test_data) 
+            future_dat <- add_ocean_basins_lbls(df_ssp_sel) 
+            # future_dat <- future_dat %>% 
+            #   group_by(year) %>% 
+            #   summarize(mean_est = mean(estimate, na.rm = T),
+            #             median_est = median(estimate, na.rm = T))
+            
+            glbl_baseline_dat <- baseline_dat %>% 
+              group_by(year,scenario) %>% 
+              summarize(mean_est = mean(estimate, na.rm = T))
+            
+            glbl_future_dat <- future_dat %>% 
+              group_by(year,scenario) %>% 
+              summarize(mean_est = mean(estimate, na.rm = T)) 
+            
+            glbl_test_data <- rbind(glbl_baseline_dat %>% dplyr::select(c("year","scenario", "mean_est")), glbl_future_dat %>% dplyr::select(c("year","scenario", "mean_est"))) 
+            glbl_test <- wilcox.test(mean_est ~ scenario, data = glbl_test_data) 
             #print(paste0("Global data - p-value: ", ))
             
             delta_perc_summary <- df_merged %>% ungroup() %>% 
@@ -3036,7 +2950,7 @@
                         mean_delta_perc = mean(delta_perc, na.rm =T), 
                         median_delta_perc = median(delta_perc, na.rm =T), 
                         sd_delta_perc = sd(delta_perc, na.rm = T),
-                        p_value = round(global_test$p.value,3),
+                        p_value = round(glbl_test$p.value,3),
                         Q1_delta_perc = quantile(delta_perc, 0.25, na.rm =T), 
                         Q3_delta_perc = quantile(delta_perc, 0.75, na.rm =T), 
                         min_delta_perc = min(delta_perc, na.rm = T),
@@ -3049,17 +2963,43 @@
             p_values <- tibble(region = character(length = 3), p_value = numeric(length = 3))
             for(k in 1:length(biome_list)){
               if(region == "3tier"){
-                test_data <- rbind(baseline_dat %>% filter(biome_3tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate")), future_dat %>% filter(biome_3tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate"))) 
+                test_data <- rbind(baseline_dat %>% 
+                                     filter(biome_3tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est")), 
+                                   future_dat %>% 
+                                     filter(biome_3tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est"))) 
               }else if(region == "5tier"){
-                test_data <- rbind(baseline_dat %>% filter(biome_5tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate")), future_dat %>% filter(biome_5tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate"))) 
+                test_data <- rbind(baseline_dat %>% 
+                                     filter(biome_5tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est")), 
+                                   future_dat %>% 
+                                     filter(biome_5tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est")))  
               }else if(region == "17tier"){
-                test_data <- rbind(baseline_dat %>% filter(biome_17tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate")), future_dat %>% filter(biome_17tier_lbls == biome_list[k]) %>% dplyr::select(c("scenario", "estimate"))) 
+                test_data <- rbind(baseline_dat %>% 
+                                     filter(biome_17tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est")), 
+                                   future_dat %>% 
+                                     filter(biome_17tier_lbls == biome_list[k]) %>% 
+                                     group_by(year,scenario) %>% 
+                                     summarize(mean_est = mean(estimate, na.rm = T)) %>% 
+                                     dplyr::select(c("year","scenario", "mean_est")))  
               }else(stop("Undetermined region categories"))
               
-              test <- wilcox.test(estimate ~ scenario, data = test_data)
+              test <- wilcox.test(mean_est ~ scenario, data = test_data)
               p_values[k,]$region = biome_list[k]
               p_values[k,]$p_value = round(test$p.value,3)
-
             }
             
             projections_biomes <- assign_ocean_basins_to_df(df_merged) 
@@ -3264,7 +3204,7 @@
         
         #1.1 identify esm on process
         #identify source id
-        esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
+        esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
         
         print(paste0("ESM source ID: ", esm_sourceid))
         
@@ -3366,7 +3306,7 @@
           ssp_scenario <- str_extract(basename(esm_selected), "ssp\\d{3}|historical")
           
           #identify source id
-          esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
+          esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
           
           #1 Read projections from RData 
           proj_dir <- paste0("output/esm_projections/",TG,"_",ssp_scenario,"_",esm_sourceid,"_",date,".RData")
@@ -3416,7 +3356,7 @@
       
       ssp_list <- c("ssp126","ssp245","ssp370","ssp585")
       
-      esm_lbls <- unique(str_extract(basename(esms), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
+      esm_lbls <- unique(str_extract(basename(esms), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
       
       delta_perc_overall <- tibble(esm_id = character(),
                                    TG = character(),
@@ -3585,7 +3525,7 @@
     perESM_compute_annual_delta <- function(esms, mdls){
       regions <- c("Global","Polar","Temperate","Tropical")
       
-      esm_lbls <- unique(str_extract(basename(esms), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
+      esm_lbls <- unique(str_extract(basename(esms), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
       
       ssp_lbls <- c("ssp126","ssp370","ssp585")
       
@@ -3604,7 +3544,7 @@
         esm_selected <- esm_lbls[h]
         
         #identify source id
-        esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
+        esm_sourceid <- str_extract(basename(esm_selected), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL")
         
         print(paste0("ESM source ID: ", esm_sourceid))
         
@@ -3747,15 +3687,17 @@
             filter(trophicGroup == TG) %>% 
             filter(region == regions[j]) 
           
-          esm_lbls <- unique(str_extract(basename(sel_projection$esm_ID), "CMCC-ESM2|CNRM-ESM2|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
+          esm_lbls <- unique(str_extract(basename(sel_projection$esm_ID), "CMCC-ESM2|CNRM-ESM2-1|GFDL-ESM4|IPSL-CM6A-LR|UKESM1-0-LL"))
           
           #to plot delta of annual mean relative to baseline
           plot_lbl <- paste0(TG,"_",regions[j],"_plot")
-          esm_colors <- c("CMCC-ESM2" = "#332288", "CNRM-ESM2" = "#44AA99", "GFDL-ESM4" = "#AA4499", "IPSL-CM6A-LR" = "#d11141","UKESM1-0-LL" = "#00aedb")
+          esm_colors <- c("CMCC-ESM2" = "#332288", "CNRM-ESM2-1" = "#44AA99", "GFDL-ESM4" = "#AA4499", "IPSL-CM6A-LR" = "#d11141","UKESM1-0-LL" = "#00aedb")
+          
+          ylims = round(c(min(m_projection$annual_median_l),max(m_projection$annual_median_u)),0)
           
           if(TG == "Omni"){
             ymin = -5
-            ymax = 5  
+            ymax = 5
           }else{
             ymin = -50
             ymax = 50
@@ -3768,7 +3710,7 @@
             geom_line(aes(x = year, y = annual_mean, colour=factor(esm_ID))) +
             geom_hline(yintercept = 0, color = "black", linetype = "dashed") +
             labs(y = bquote(Delta~"proportion (%)"), x = "") +
-            coord_cartesian(ylim = round(c(ymin, ymax), 0), xlim = c(1980,2100)) +
+            coord_cartesian(ylim = round(c(ymin, ymax),0), xlim = c(1980,2100)) +
             scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
             scale_colour_manual(values = esm_colors, labels=esm_lbls, 
                                 aesthetics = c("colour","fill")) +
@@ -3822,13 +3764,13 @@
       m_projection <- tibble(experiment = character(length = 0),
                              region = character(length = 0),
                              year = numeric(length = 0),
-                             annual_median = numeric(length = 0),
+                             annual_mean = numeric(length = 0),
                              annual_sd = numeric(length = 0),
-                             annual_median_u = numeric(length = 0),
-                             annual_median_l = numeric(length = 0))
+                             annual_mean_u = numeric(length = 0),
+                             annual_mean_l = numeric(length = 0))
       
-      dir_historical_ensemble <- "data_input/ensemble_chlos/median/chlos/chlos_Omon_ensemble_historical_r1i1p1f1_RegriddedAnnual_18500101-20141231.nc"
-      
+      dir_historical_ensemble <- ensemble[str_detect(ensemble, paste0("ensemble_historical"))]
+        
       hist_ens <- read_stars(dir_historical_ensemble, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
       print(paste0("Loaded projections under historical scenario"))
       
@@ -3859,13 +3801,11 @@
       
       df_hist <- assign_ocean_basins_to_df(df_hist)
       
-      ##TO CONTINUE
-      
       #to subset baseline (1980-2000) and recent past (1980-2014)
       baseline <- df_hist %>% 
         filter(year >= 1980 & year <= 2000) %>%
         group_by(x,y) %>% 
-        summarize("hist_chla_sqrt" = mean(chla_sqrt, na.rm = T)) #mean or median
+        summarize("hist_chla_sqrt" = mean(chla_sqrt, na.rm = T)) 
       
       #to compute for delta in recent past relative to baseline (1980-2000)
       recentPast <- df_hist %>% 
@@ -3877,12 +3817,12 @@
       
       recentPast_summary <- recentPast_calc %>%   
         group_by(year) %>% 
-        summarise(annual_median = median(delta, na.rm = T), 
+        summarise(annual_mean = mean(delta, na.rm = T), 
                   annual_sd = sd(delta, na.rm = T)) 
       
       recentPast_summary <- recentPast_summary %>% 
-        mutate(annual_median_u = annual_median + annual_sd,
-               annual_median_l = annual_median - annual_sd)
+        mutate(annual_mean_u = annual_mean + annual_sd,
+               annual_mean_l = annual_mean - annual_sd)
       
       for(i in 1:length(ensemble)){
         
@@ -3934,13 +3874,13 @@
         
         projection_summary <- projection_calc %>%   
           group_by(year) %>% 
-          summarise(annual_median = median(delta, na.rm = T), 
+          summarise(annual_mean = mean(delta, na.rm = T), 
                     annual_sd = sd(delta, na.rm = T)) %>% 
           mutate(experiment = ssp_scenario)
         
         projection_summary <- projection_summary %>% 
-          mutate(annual_median_u = annual_median + annual_sd,
-                 annual_median_l = annual_median - annual_sd)
+          mutate(annual_mean_u = annual_mean + annual_sd,
+                 annual_mean_l = annual_mean - annual_sd)
         
         #to save each iteration of projection summary to 'm_projection' df 
         m_projection <- m_projection %>% 
@@ -3948,15 +3888,15 @@
         
       }
       
-      ylims = round(c(min(m_projection$annual_median_l),max(m_projection$annual_median_u)),0)
+      ylims = round(c(min(m_projection$annual_mean_l),max(m_projection$annual_mean_u)),0)
       
       ssp_colors <- c("ssp126" = "#332288", "ssp370" = "#44AA99", "ssp585" = "#AA4499")
       
       #to plot
       plot <- ggplot(data = m_projection) + pub_theme +
-        geom_ribbon(aes(x = year, y = annual_median,
-                        ymin = annual_median_l, ymax = annual_median_u, fill = factor(experiment)), alpha = 0.1, linetype=2) +
-        geom_line(aes(x = year, y = annual_median, colour=factor(experiment))) +
+        geom_ribbon(aes(x = year, y = annual_mean,
+                        ymin = annual_mean_l, ymax = annual_mean_u, fill = factor(experiment)), alpha = 0.1, linetype=2) +
+        geom_line(aes(x = year, y = annual_mean, colour=factor(experiment))) +
         geom_hline(yintercept = 0, color = "black", linetype = "dashed" )+
         labs(y = bquote(Delta~sqrt("Chl-a")~"(%)"), x = "Year") +
         coord_cartesian(ylim = ylims, xlim = c(1980,2100)) +
@@ -3981,12 +3921,12 @@
       
       #to summarize delta by future (2080-2100) relative to baseline (1980-2000) and print out
       delta_perc_summary <- m_projection_sel %>% group_by(experiment) %>% 
-        summarise(mean_delta_perc = mean(annual_median_l, na.rm =T), 
-                  median_delta_perc = median(annual_median, na.rm =T), 
-                  Q1_delta_perc = quantile(annual_median, 0.25, na.rm =T), 
-                  Q3_delta_perc = quantile(annual_median, 0.75, na.rm =T), 
-                  min_delta_perc = min(annual_median, na.rm = T),
-                  max_delta_perc = max(annual_median, na.rm = T))
+        summarise(mean_delta_perc = mean(annual_mean, na.rm =T), 
+                  median_delta_perc = median(annual_mean, na.rm =T), 
+                  Q1_delta_perc = quantile(annual_mean, 0.25, na.rm =T), 
+                  Q3_delta_perc = quantile(annual_mean, 0.75, na.rm =T), 
+                  min_delta_perc = min(annual_mean, na.rm = T),
+                  max_delta_perc = max(annual_mean, na.rm = T))
       
       assign("chlos_summary", delta_perc_summary, envir = .GlobalEnv)
       print("Saved in Global Env: chlos_summary")
@@ -4012,7 +3952,7 @@
     }
       
     #to convert chlos (kg/m^3) to chla_sqrt (sqrt (mg/m^3) )
-    convert_to_chla_sqrt <- function(x){ sqrt(x * 1000000) } 
+    convert_chlos_to_chla_sqrt <- function(x){ sqrt(x * 1000000) } 
     
     perESM_plot_delta_chlos <- function(esms){
       
@@ -4023,10 +3963,10 @@
       m_projection <- tibble(experiment = character(length = 0),
                              esm_id = character(length = 0),
                              year = numeric(length = 0),
-                             annual_median = numeric(length = 0),
+                             annual_mean = numeric(length = 0),
                              annual_sd = numeric(length = 0),
-                             annual_median_u = numeric(length = 0),
-                             annual_median_l = numeric(length = 0))
+                             annual_mean_u = numeric(length = 0),
+                             annual_mean_l = numeric(length = 0))
       
       for(i in 1:length(esm_lbls)){
         
@@ -4040,7 +3980,7 @@
         hist_ens <- read_stars(dir_hist, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
         print(paste0("Loaded projections under historical scenario"))
         
-        hist_converted <- st_apply(hist_ens,1:3, convert_to_chla_sqrt, rename = F)  
+        hist_converted <- st_apply(hist_ens,1:3, convert_chlos_to_chla_sqrt, rename = F)  
         
         hist_converted <- hist_converted %>% 
           rename(chla_sqrt = chlos)
@@ -4084,12 +4024,12 @@
         
         recentPast_summary <- recentPast_calc %>%   
           group_by(year) %>% 
-          summarise(annual_median = median(delta, na.rm = T), 
+          summarise(annual_mean = mean(delta, na.rm = T), 
                     annual_sd = sd(delta, na.rm = T)) 
         
         recentPast_summary <- recentPast_summary %>% 
-          mutate(annual_median_u = annual_median + annual_sd,
-                 annual_median_l = annual_median - annual_sd)
+          mutate(annual_mean_u = annual_mean + annual_sd,
+                 annual_mean_l = annual_mean - annual_sd)
         
         #to include recentPast to 'm_projection' df 
         recentPast_summary <- recentPast_summary %>% 
@@ -4107,7 +4047,7 @@
         #1.1 load ensemble
         esm_selected <- read_stars(dir_future, quiet = TRUE, proxy = TRUE) %>% setNames("chlos")
         
-        esm_converted <- st_apply(esm_selected,1:3, convert_to_chla_sqrt, rename = F)  
+        esm_converted <- st_apply(esm_selected,1:3, convert_chlos_to_chla_sqrt, rename = F)  
         
         esm_converted <- esm_converted %>% 
           rename(chla_sqrt = chlos)
@@ -4125,30 +4065,29 @@
         
         projection_summary <- projection_calc %>%   
           group_by(year) %>% 
-          summarise(annual_median = median(delta, na.rm = T), 
+          summarise(annual_mean = mean(delta, na.rm = T), 
                     annual_sd = sd(delta, na.rm = T)) %>% 
           mutate(experiment = ssp_scenario) %>% 
           mutate(esm_id = cur_esm_lbl)
         
         projection_summary <- projection_summary %>% 
-          mutate(annual_median_u = annual_median + annual_sd,
-                 annual_median_l = annual_median - annual_sd)
+          mutate(annual_mean_u = annual_mean + annual_sd,
+                 annual_mean_l = annual_mean - annual_sd)
         
         #to save each iteration of projection summary to 'm_projection' df 
         m_projection <- m_projection %>% 
           rows_append(projection_summary)
-        
       }
       
-      ylims = round(c(min(m_projection$annual_median_l),max(m_projection$annual_median_u)),0)
+      ylims = round(c(min(m_projection$annual_mean_l),max(m_projection$annual_mean_u)),0)
       
       esm_colors <- c("CMCC-ESM2" = "#332288", "CNRM-ESM2-1" = "#44AA99", "GFDL-ESM4" = "#AA4499", "IPSL-CM6A-LR" = "#d11141","UKESM1-0-LL" = "#00aedb")
       
       #to plot
       plot <- ggplot(data = m_projection) + pub_theme +
-        geom_ribbon(aes(x = year, y = annual_median,
-                        ymin = annual_median_l, ymax = annual_median_u, fill = factor(esm_id)), alpha = 0.1, linetype=2) +
-        geom_line(aes(x = year, y = annual_median, colour=factor(esm_id))) +
+        geom_ribbon(aes(x = year, y = annual_mean,
+                        ymin = annual_mean_l, ymax = annual_mean_u, fill = factor(esm_id)), alpha = 0.1, linetype=2) +
+        geom_line(aes(x = year, y = annual_mean, colour=factor(esm_id))) +
         geom_hline(yintercept = 0, color = "black", linetype = "dashed" )+
         labs(y = bquote(Delta~sqrt("Chl-a")~"(%)"), x = "Year") +
         coord_cartesian(ylim = ylims, xlim = c(1980,2100)) +
@@ -4174,16 +4113,114 @@
       
       #to summarize delta by future (2080-2100) relative to baseline (1980-2000) and print out
       delta_perc_summary <- m_projection_sel %>% group_by(esm_id) %>% 
-        summarise(mean_delta_perc = mean(annual_median_l, na.rm =T), 
-                  median_delta_perc = median(annual_median, na.rm =T), 
-                  Q1_delta_perc = quantile(annual_median, 0.25, na.rm =T), 
-                  Q3_delta_perc = quantile(annual_median, 0.75, na.rm =T), 
-                  min_delta_perc = min(annual_median, na.rm = T),
-                  max_delta_perc = max(annual_median, na.rm = T))
+        summarise(mean_delta_perc = mean(annual_mean_l, na.rm =T), 
+                  median_delta_perc = median(annual_mean, na.rm =T), 
+                  Q1_delta_perc = quantile(annual_mean, 0.25, na.rm =T), 
+                  Q3_delta_perc = quantile(annual_mean, 0.75, na.rm =T), 
+                  min_delta_perc = min(annual_mean, na.rm = T),
+                  max_delta_perc = max(annual_mean, na.rm = T))
       
       assign("perESM_chlos_summary", delta_perc_summary, envir = .GlobalEnv)
       print("Saved in Global Env: perESM_chlos_summary")
       
+      
+    }
+    
+  #6b.13 plot projections on Earth surface
+    
+    perESM_map_projections <- function(ensemble, mdls){
+      
+      ssp_scenario_list <- unique(str_extract(basename(ensemble), "ssp\\d{3}|historical"))
+      
+      for(i in 1:length(mdls)){
+        TG <- names(mdls)[i]
+        print(paste0("Model in process: ",TG))
+        
+        for(j in 1:length(ssp_scenario_list)){
+          
+          ssp_scenario <- ssp_scenario_list[j]
+            
+          projection_dir <- paste0(enexpr(output_dir),"projections_biome/",TG,"_",ssp_scenario,"_",date,".RData")
+          projection <- read_rds(file = enexpr(projection_dir))
+          
+          ssp_list <- c()
+          
+          for(k in 1:length(ensemble)){
+            ssp_scenario <- str_extract(basename(ensemble[[k]]), "ssp\\d{3}")
+            #print(paste0("Projections under ",ssp_scenario," scenario"))
+            
+            if(ssp_scenario == "ssp126"){
+              ssp_scenario_label <- "SSP 1-2.6"
+            }else if(ssp_scenario == "ssp245"){
+              ssp_scenario_label <- "SSP 2-4.5"
+            }else if(ssp_scenario == "ssp370"){
+              ssp_scenario_label <- "SSP 3-7.0"
+            }else if(ssp_scenario == "ssp585"){
+              ssp_scenario_label <- "SSP 5-8.5"
+            }else{ print("Misspecified SSP scenario")}
+            
+            ssp_list <- c(ssp_list, ssp_scenario_label)
+            
+            #to plot delta of annual mean relative to baseline
+            plot_lbl <- paste0(TG,"_",regions[j],"_plot")
+            
+            ssp_colors <- c("ssp126" = "#332288", "ssp370" = "#44AA99", "ssp585" = "#AA4499")
+            
+            plot <- ggplot(data = sel_projection) + pub_theme +
+              geom_ribbon(aes(x = year, y = annual_mean,
+                              ymin = annual_mean_l, ymax = annual_mean_u, 
+                              fill = factor(experiment)), alpha = 0.1, linetype=2) +
+              geom_line(aes(x = year, y = annual_mean, colour=factor(experiment))) +
+              geom_hline(yintercept = 0, color = "black", linetype = "dashed") +
+              labs(y = bquote(Delta~"proportion (%)"), x = "") +
+              coord_cartesian(ylim = round(c(-5, 5), 0), xlim = c(1980,2100)) +
+              scale_x_continuous(breaks = seq(1980, 2100, by = 20)) +
+              scale_colour_manual(values = ssp_colors, labels=ssp_list, 
+                                  aesthetics = c("colour", "fill")) +
+              theme(legend.title = element_blank(), 
+                    legend.text = element_text(size = 6), 
+                    #legend.position = "top", 
+                    axis.title = element_text(size = 6),
+                    axis.text = element_text(size = 6)) +
+              guides(colour = guide_legend(override.aes = list(size = 0.5, alpha = 1))) 
+            
+            # scale_color_manual(values = colors, aesthetics = c("colour", "fill")) 
+            assign(enexpr(plot_lbl), plot, envir = environment(plot_delta_perTG))
+          }
+        }
+        #}
+        #to save merged projection data
+        # write_rds(m_projection, file = paste0("output/projections/fProjections_",TG,"_",date))
+        # print(paste0("Saved projection data: output/projections/fProjections_",TG,"_",date))
+      }
+      
+      Carni_Global_plot <- Carni_Global_plot +
+        annotate("text", x = 1980, y = -4, label = "Global", parse = T, size = 3, hjust = 0) +
+        annotate("text", x = 2040, y = 5, label = "Carnivores", size = 3, hjust = 0.5)
+      Carni_Polar_plot <- Carni_Polar_plot +
+        annotate("text", x = 1980, y = -4, label = "Polar", parse = T, size = 3, hjust = 0)
+      Carni_Temperate_plot <- Carni_Temperate_plot +
+        annotate("text", x = 1980, y = -4, label = "Temperate", parse = T, size = 3, hjust = 0)
+      Carni_Tropical_plot <- Carni_Tropical_plot + labs(x = "Year") +
+        annotate("text", x = 1980, y = -4, label = "Tropical", parse = T, size = 3, hjust = 0)
+      Filter_Global_plot <- Filter_Global_plot +
+        annotate("text", x = 2040, y = 5, label = "Gelatinous filter-feeders", size = 3, hjust = 0.5)
+      Filter_Tropical_plot <- Filter_Tropical_plot + labs(x = "Year") 
+      Omni_Global_plot <- Omni_Global_plot +
+        annotate("text", x = 2040, y = 5, label = "Omnivores", size = 3, hjust = 0.5)
+      Omni_Tropical_plot <- Omni_Tropical_plot + labs(x = "Year") 
+      
+      mPlots <- Carni_Global_plot + Filter_Global_plot + Omni_Global_plot +
+        Carni_Polar_plot + Filter_Polar_plot + Omni_Polar_plot +
+        Carni_Temperate_plot + Filter_Temperate_plot + Omni_Temperate_plot +
+        Carni_Tropical_plot + Filter_Tropical_plot + Omni_Tropical_plot +
+        plot_annotation(tag_levels = "A") +
+        plot_layout(ncol = 3, guides = "collect") &
+        theme(legend.position = "bottom") 
+      
+      ggsave(paste0("output/plots/deltaPlots_TG_",date,".png"), plot = mPlots,
+             width = 180, height = 180, units = "mm", dpi = 300)
+      print(paste0("File saved: deltaPlots_TG_",date,".png"))
       
     }
     
