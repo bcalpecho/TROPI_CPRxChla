@@ -188,11 +188,11 @@
 ########## 6a Generate ensemble of chlos projections ############
     
   #load ensemble of chlos (surface chlorophyll-a) projections from ten CMIP6 ESMs
-    ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
     ensembles_mean <- list.files(file.path("data_input","ensemble_chlos","mean","chlos"), full.names = TRUE)
-    # list of median ensemble for 'historical', 'ssp126', 'ssp245', 'ssp370', and 'ssp585'
-    # see 'script/6a_generate_ensemble' for steps in generating an ensemble of chlos projections
-    # this requires a Linux environment or virtual machine on Windows 
+    #ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
+    ## list of median ensemble for 'historical', 'ssp126', 'ssp245', 'ssp370', and 'ssp585'
+    ## see 'script/6a_generate_ensemble' for steps in generating an ensemble of chlos projections
+    ## this requires a Linux environment or virtual machine on Windows 
 
 ########## 6b Project global relative abundance of zooplankton trophic groups ##########
   
@@ -202,7 +202,7 @@
     
   #USING THE ENSEMBLE  
     #6.0 to plot annual mean of chlos ensemble from 1980-2100
-    plot_delta_chlos(ensemble = ensembles_mean[c(1,2,4,5)]) 
+    plot_delta_chlos_withBiomes(ensemble = ensembles_median[c(1,2,4,5)]) 
     
     #6.1 to project the relative abundance of each zooplankton trophic group by 2100
       
@@ -220,7 +220,7 @@
           project_annual_TG_proportions(ensemble = ensembles_mean[5], mdls = mdl_list) 
           
         #to assign open-ocean regions/biomes (Ray & McKinley, 2014; Heneghan et al., 2023)
-          assign_ocean_basins(ensemble = ensembles_median, mdls = mdl_list)
+          assign_ocean_basins(ensemble = ensembles_mean, mdls = mdl_list)
     
     #6.2 summary statistics of projections per model
         #summary statistics by yr 2100
@@ -229,34 +229,28 @@
         #to compute for change in relative abundance of zooplankton trophic groups by 2100 relative to 1980-2000
           #at global and biome-scale 
           #3-tier (polar, temperate, and tropical)
-          compute_biome_delta_historical(mdls = mdl_list, region = "3tier")
+          compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "3tier")
           
           #5-tier
-          compute_biome_delta_historical(mdls = mdl_list, region = "5tier")
+          compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "5tier")
           
           #17-tier
-          compute_biome_delta_historical(mdls = mdl_list, region = "17tier")
+          compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "17tier")
           
     #6.3 to compute & plot the annual change relative to 1980-2000
       #to compute annual delta
-        compute_annual_delta(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp126, 370, 585
-      
-        compute_annual_delta_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list)
-        
+        compute_annual_delta(ensemble = ensembles_mean[c(2,4,5)], mdls = mdl_list) #ssp126, 370, 585
+          
       ##A. one plot per SSP scenario
         plot_delta_perSSPscenario(ensemble = ensembles_mean[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
   
-        plot_delta_perSSPscenario_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
-        
       ##B. one plot per zooplankton trophic group
         plot_delta_perTG(ensemble = ensembles_mean[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
         
-        plot_delta_perTG_5tier(ensemble = ensembles_median[c(2,4,5)], mdls = mdl_list) #ssp 126, 370, 585
-        
-  #USING INDIVIDUAL ESMs
-    #load individual ESMs
+  #USING INDIVIDUAL ESM
+    #load individual esm
       esm_list <- list.files(file.path("data_input","esm_chlos"), full.names = T)
-      
+      #to plot the chlos projections per esm
       perESM_plot_delta_chlos(esms = esm_list)
       
     #6.1 to project the relative abundance of each zooplankton trophic group by 2100
