@@ -2,7 +2,6 @@
 
 Repository for a research project on assessing the changes of the global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. 
 
-
 ### 01 Data availability
 Our findings are supported by open-access datasets. The data of Continuous Plankton Recorder (CPR) surveys are available in their respective online repositories as follows:
 * ```Australian CPR Survey``` through the Australian Ocean Data Network (https://portal.aodn.org.au/search?uuid=bf287dfe-9ce4-4969-9c59-51c39ea4d011%20on%2029/06/202)
@@ -13,9 +12,9 @@ Our findings are supported by open-access datasets. The data of Continuous Plank
 Other data and layers used in the analysis:
 * The ESA OC-CCI chl-a data can be accessed at https://www.oceancolour.org/thredds/ncss/grid/CCI_ALL-v6.0-8DAY/dataset.html.  
 * The CMIP6 data are archived and distributed by the Earth System Grid Federation (ESGF; https://aims2.llnl.gov/search). 
-* The Longhurst Provinces are available through marineregions.org (https://marineregions.org/downloads.php)
+* The Longhurst Provinces are available through marineregions.org (https://marineregions.org/downloads.php).
 * The ocean biomes are adapted from Heneghan et al. (2023; https://doi.org/10.1038/s41558-023-01630-7) and Fay & McKinley (2014; https://doi.org/10.5194/essd-6-273-2014).
-* The trait repositories, CPR-specific literature, and broader functional trait studies are cited in the ```data_input/traits/fTraitTable.csv```.\
+* The trait repositories, CPR-specific literature, and broader functional trait studies are cited in ```data_input/traits/fTraitTable.csv```.
  
 ### 02 Scripts
 The data preparation and analysis can be performed in two ways: 
@@ -44,7 +43,7 @@ B. For complete run-through including data preparation from raw data (applicable
   * Raw OC-CCI files must be stored in ```data_input/OCCCI```.
 
 The main output of the scripts are as follows:
-  * Visual summary of the selected model predictions and projections of the mean ensemble are in ```output/plots```.
+  * Visual summaries of the selected model predictions and projections of the mean ensemble are in ```output/plots```.
   * Selected GLM models are in ```output/mdls```.
   * Descriptive statistics of the projections are in ```output/projections```.
   * Other plots for preliminary statistics and model selection criterion are in ```output/plots```.
