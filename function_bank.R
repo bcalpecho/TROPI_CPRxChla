@@ -2460,7 +2460,7 @@
               geom_ribbon(aes(x = year, y = annual_mean,
                               ymin = annual_mean_l, ymax = annual_mean_u, 
                               fill = factor(trophicGroup)), alpha = 0.1, linetype=2) +
-              geom_line(aes(x = year, y = annual_mean, colour=factor(trophicGroup)), show.legend = F) +
+              geom_line(aes(x = year, y = annual_mean, colour=factor(trophicGroup), alpha = 0.5), show.legend = F) +
               geom_hline(yintercept = 0, color = "black", linetype = "dashed")+
               labs(colour = "Trophic Group", y = bquote(Delta~"proportion (%)"), x = "") +
               coord_cartesian(ylim = ylims, xlim = c(1980,2100)) +
@@ -3015,7 +3015,7 @@
     assign_ocean_basins_to_df <- function(df_coords){
       df_init <- df_coords 
       
-      #Ray & McKinley (2014) Global open-ocean biomes
+      #Fay & McKinley (2014) Global open-ocean biomes
         time_varying_biomes <- read_ncdf("data_input/biomes/Time_Varying_Biomes.nc", var = "TimeVaryingBiomes", show_col_types = FALSE)      
         
         time_varying_biomes <- st_set_dimensions(time_varying_biomes, xy = c("lon","lat"))
@@ -3042,7 +3042,7 @@
     
     assign_ocean_basins <- function(ensemble, mdls){
       
-      #Ray & McKinley (2014) Global open-ocean biomes
+      #Fay & McKinley (2014) Global open-ocean biomes
       time_varying_biomes <- read_ncdf("data_input/biomes/Time_Varying_Biomes.nc", var = "TimeVaryingBiomes", show_col_types = FALSE)      
       
       time_varying_biomes <- st_set_dimensions(time_varying_biomes, xy = c("lon","lat"))
@@ -3211,7 +3211,7 @@
     
     perESM_assign_ocean_basins <- function(esms, mdls){
       
-      #Ray & McKinley (2014) Global open-ocean biomes
+      #Fay & McKinley (2014) Global open-ocean biomes
       time_varying_biomes <- read_ncdf("data_input/biomes/Time_Varying_Biomes.nc", var = "TimeVaryingBiomes", show_col_types = FALSE)      
       
       time_varying_biomes <- st_set_dimensions(time_varying_biomes, xy = c("lon","lat"))
@@ -4154,6 +4154,23 @@
       ggsave(paste0("output/plots/deltaPlots_chlos_",ensemble_method,"Ensemble_",date,".png"), plot = mPlots,
              width = 90, height = 180, units = "mm", dpi = 300)
       print(paste0("File saved: deltaPlots_chlos_",date,".png"))
+      
+      #to save summary statistics in globalEnv of R
+      #to subset future (2080-2100)
+      m_projection_sel <- m_projection %>% filter(year >= 2080 & year <= 2100) 
+      
+      #to summarize delta by future (2080-2100) relative to baseline (1980-2000) and print out
+      delta_perc_summary <- m_projection_sel %>% group_by(experiment) %>% 
+        summarise(mean_delta_perc = mean(annual_mean, na.rm =T), 
+                  median_delta_perc = median(annual_mean, na.rm =T), 
+                  Q1_delta_perc = quantile(annual_mean, 0.25, na.rm =T), 
+                  Q3_delta_perc = quantile(annual_mean, 0.75, na.rm =T), 
+                  min_delta_perc = min(annual_mean, na.rm = T),
+                  max_delta_perc = max(annual_mean, na.rm = T))
+      
+      assign("chlos_summary", delta_perc_summary, envir = .GlobalEnv)
+      print("Saved in Global Env: chlos_summary")
+      write_csv(delta_perc_summary, file = paste0("output/projections/projections_summary_chlos_",date))
       
     }
     

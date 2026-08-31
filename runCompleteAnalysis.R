@@ -14,10 +14,8 @@
   # Raw OC-CCI files must be stored in 'data_input/OCCCI' 
   # Follow from the first step (pre-process raw CPR files).
 
-
 # Setup ####
   # Load functions and set directories
-  
   source("function_bank.R")
   input_dir <- "data_input/" # where files are read from
   output_dir <- "output/" # where files are written to
@@ -111,7 +109,7 @@
     df_date <- date
     df <- read_rds(paste0("data_input/global_df_complete_",df_date,".rds"))
     
-  # 4.2 Selected models (see '4_model_globalCPR' script for competing models)  + survey
+  # 4.2 Selected models (see '4_model_globalCPR' script for competing models) 
     Carni_mdl_zib <- glmmTMB(RCO_SVT_zib ~ chla_sqrt + survey + (1 + tow_days | survey: tow_no) + (1 | longhurst), 
                                ziformula = ~1,
                              data = df, family = beta_family(link = "logit"))
@@ -202,7 +200,7 @@
     
   #USING THE ENSEMBLE  
     #6.0 to plot annual mean of chlos ensemble from 1980-2100
-    plot_delta_chlos_withBiomes(ensemble = ensembles_median[c(1,2,4,5)]) 
+    plot_delta_chlos_withBiomes(ensemble = ensembles_mean[c(1,2,4,5)]) 
     
     #6.1 to project the relative abundance of each zooplankton trophic group by 2100
       
@@ -230,12 +228,6 @@
           #at global and biome-scale 
           #3-tier (polar, temperate, and tropical)
           compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "3tier")
-          
-          #5-tier
-          compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "5tier")
-          
-          #17-tier
-          compute_biome_delta_historical(ensemble = ensembles_mean, mdls = mdl_list, region = "17tier")
           
     #6.3 to compute & plot the annual change relative to 1980-2000
       #to compute annual delta

@@ -14,13 +14,15 @@
 #basic aim: compute for change in zooplankton trophic group by 2100 relative to 2015
 
 ##setup
-  source("helper_ensemble.R")
+  source("scripts/helper_ensemble.R")
   date <- "04052026"
 
   #load ensemble
     var <- "chlos"
     base_dir <- "./hotrstuff/" 
-    ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
+    ensembles_mean <- list.files(file.path("data_input","ensemble_chlos","mean","chlos"), full.names = TRUE)
+    
+    #ensembles_median <- list.files(file.path("data_input","ensemble_chlos","median","chlos"), full.names = TRUE)
     #process the SSP scenarios one-by-one (One ensemble each SSP scenario)
 
   #load zooplankton GLMs
@@ -31,7 +33,7 @@
 #01 to visualize and summarize the ensemble of chlos projections
     
     #plot annual mean of chlos median ensemble from 1980-2100
-    plot_delta_chlos(ensembles_median[c(2,3,4,5)])
+    plot_delta_chlos(ensembles_mean[c(2,3,4,5)])
     
      #to plot delta (2100 relative to 2015 chlos)
     #ssp126
@@ -43,7 +45,7 @@
     plot_esm_delta(ens_ssp585)
     
     #summary statistics
-    summary_stats_chlos(ensembles_median)
+    summary_stats_chlos(ensembles_mean)
     
 #02 to predict zooplankton trophic group
 
