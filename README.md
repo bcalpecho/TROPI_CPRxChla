@@ -1,18 +1,22 @@
-# Modelling Continuous Plankton Recorder Surveys
+# Climate-driven decline in phytoplankton biomass and size reshapes global zooplankton community
 
 Repository for a research project on assessing the changes of the global zooplankton community resolved to trophic groups (omnivores, carnivores, and gelatinous filter-feeders) across the satellite-derived chlorophyll-a gradient. 
 
-### Data availability.
-Our findings are supported by open-access datasets. The data of Continuous Plankton Recorder surveys are available in their respective online repositories. 
+### 01 Data availability
+Our findings are supported by open-access datasets. The data of Continuous Plankton Recorder (CPR) surveys are available in their respective online repositories as follows:
 * ```Australian CPR Survey``` through the Australian Ocean Data Network (https://portal.aodn.org.au/search?uuid=bf287dfe-9ce4-4969-9c59-51c39ea4d011%20on%2029/06/202)
 * ```Atlantic CPR Survey``` through the Archive for Marine Species and Habitats Data (https://doi.mba.ac.uk/data/2962)
 * ```North Pacific CPR Survey``` through the Archive for Marine Species and Habitats Data (https://doi.mba.ac.uk/data/3086)
 * ```Southern Ocean CPR Survey``` through the Australian Antarctic Data Center (https://data.aad.gov.au/aadc/cpr/)
 
-The ESA OC-CCI chl-a data can be accessed at https://www.oceancolour.org/thredds/ncss/grid/CCI_ALL-v6.0-8DAY/dataset.html.  
-The CMIP6 data are archived and distributed by the Earth System Grid Federation (ESGF; https://aims2.llnl.gov/search). 
-
-### Scripts.
+Other data and layers used in the analysis:
+* The ESA OC-CCI chl-a data can be accessed at https://www.oceancolour.org/thredds/ncss/grid/CCI_ALL-v6.0-8DAY/dataset.html.  
+* The CMIP6 data are archived and distributed by the Earth System Grid Federation (ESGF; https://aims2.llnl.gov/search). 
+* The Longhurst Provinces are available through marineregions.org (https://marineregions.org/downloads.php).
+* The ocean biomes are adapted from Heneghan et al. (2023; https://doi.org/10.1038/s41558-023-01630-7) and Fay & McKinley (2014; https://doi.org/10.5194/essd-6-273-2014).
+* The trait repositories, CPR-specific literature, and broader functional trait studies are cited in ```data_input/traits/fTraitTable.csv```.
+ 
+### 02 Scripts
 The data preparation and analysis can be performed in two ways: 
 * Through a single script ```runCompleteAnalysis.R``` (Current Version).
 * Through modular scripts in ```scripts``` folder (MSc thesis Version).
@@ -28,8 +32,23 @@ The data preparation and analysis can be performed in two ways:
   * ```7_plot_modelsummary.R``` produce visual summary of selected models (Figures 1 and 2; Supplementary Figures 1 and 2).
   * ```helper_CPR.R``` additional functions for visualizing and preparing the zooplankton data. Includes creation of Figure 3 (Map of Global CPR).
   * ```helper_ensemble.R``` additional functions for visualizing and summarizing the ensemble data.
+
+### 03 How to run the data analysis using ```runCompleteAnalysis.R```?
+A. To replicate the current version of model and projections, 
+  * Start from 'Step 4: Model the Global CPR' onwards using the existing dataframe ```data_input/global_df_complete_04052026.rds```.
   
-### Acknowledgements.
+B. For complete run-through including data preparation from raw data (applicable to newer version of CPR data), 
+  * Start the analysis from the first step ('Step 0: Pre-process raw CPR data').
+  * Raw CPR files must be stored in ```data_input/CPR```.
+  * Raw OC-CCI files must be stored in ```data_input/OCCCI```.
+
+The main output of the scripts are as follows:
+  * Visual summaries of the selected model predictions and projections of the mean ensemble are in ```output/plots```.
+  * Selected GLM models are in ```output/mdls```.
+  * Descriptive statistics of the projections are in ```output/projections```.
+  * Other plots for preliminary statistics and model selection criterion are in ```output/plots```.
+
+### 04 Acknowledgements
 
 The Global Alliance of Continuous Plankton Recorders have provided the data of the AusCPR, the Atlantic CPR, the North Pacific CPR, and the Southern Ocean CPR surveys. Data for AusCPR were sourced from Australia’s Integrated Marine Observing System (IMOS) – IMOS is enabled by the National Collaborative Research Infrastructure Strategy (NCRIS). Data for the Atlantic CPR were sourced from the Marine Biological Association of the United Kingdom through the UK Archive for Marine Species and Habitats Data (DASSH). Data for the North Pacific CPR were sourced from the North Pacific Marine Science Organization through the DASSH. Data for the Southern Ocean CPR were sourced from the Scientific Committee on Antarctic Research (SCAR) sponsored Southern Ocean CPR (SO-CPR) Survey Database hosted by the Australian Antarctic Data Centre. 
 
